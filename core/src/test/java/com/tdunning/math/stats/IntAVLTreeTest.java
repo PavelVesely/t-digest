@@ -20,8 +20,8 @@ package com.tdunning.math.stats;
 import org.junit.Test;
 
 import java.util.*;
-
-
+import org.junit.Ignore;
+@Ignore
 public class IntAVLTreeTest extends AbstractTest {
 
     static class IntBag extends IntAVLTree {

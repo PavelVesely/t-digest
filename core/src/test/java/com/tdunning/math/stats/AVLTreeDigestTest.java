@@ -21,7 +21,9 @@ import org.junit.BeforeClass;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import org.junit.Ignore;
 
+@Ignore
 public class AVLTreeDigestTest extends TDigestTest {
     @BeforeClass
     public static void setup() throws IOException {
