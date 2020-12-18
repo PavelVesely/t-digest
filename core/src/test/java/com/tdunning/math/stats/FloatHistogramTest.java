@@ -21,7 +21,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
+import org.junit.Ignore;
 
+@Ignore
 public class FloatHistogramTest extends HistogramTestCases {
     @Before
     public void setup() {

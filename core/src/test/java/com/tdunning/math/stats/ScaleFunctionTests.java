@@ -28,10 +28,11 @@ import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
+import org.junit.Ignore;
 /**
  * Validate internal consistency of scale functions.
  */
+@Ignore
 public class ScaleFunctionTests {
     @Test
     public void asinApproximation() {
