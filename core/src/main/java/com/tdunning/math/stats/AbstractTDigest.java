@@ -17,6 +17,7 @@
 
 package com.tdunning.math.stats;
 
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,33 +25,59 @@ import java.util.List;
 import java.util.Random;
 
 public abstract class AbstractTDigest extends TDigest {
+
     final Random gen = new Random();
     boolean recordAllData = false;
 
     /**
-     * Same as {@link #weightedAverageSorted(double, double, double, double)} but flips
-     * the order of the variables if <code>x2</code> is greater than
+     * Same as {@link #weightedAverageSorted(double, double, double, double)} but flips the order of
+     * the variables if <code>x2</code> is greater than
      * <code>x1</code>.
      */
     static double weightedAverage(double x1, double w1, double x2, double w2) {
-        if (x1 <= x2) {
+        return weightedAverage(BigDecimal.valueOf(x1), w1, BigDecimal.valueOf(x2), w2)
+            .doubleValue();
+//        if (x1 <= x2) {
+//            return weightedAverageSorted(x1, w1, x2, w2);
+//        } else {
+//            return weightedAverageSorted(x2, w2, x1, w1);
+//        }
+    }
+
+    static BigDecimal weightedAverage(BigDecimal x1, double w1, BigDecimal x2, double w2) {
+        if (x1.compareTo(x2) <= 0) {
             return weightedAverageSorted(x1, w1, x2, w2);
         } else {
             return weightedAverageSorted(x2, w2, x1, w1);
         }
     }
 
+
     /**
      * Compute the weighted average between <code>x1</code> with a weight of
      * <code>w1</code> and <code>x2</code> with a weight of <code>w2</code>.
-     * This expects <code>x1</code> to be less than or equal to <code>x2</code>
-     * and is guaranteed to return a number between <code>x1</code> and
+     * This expects <code>x1</code> to be less than or equal to <code>x2</code> and is guaranteed to
+     * return a number between <code>x1</code> and
      * <code>x2</code>.
      */
     private static double weightedAverageSorted(double x1, double w1, double x2, double w2) {
-        assert x1 <= x2;
-        final double x = (x1 * w1 + x2 * w2) / (w1 + w2);
-        return Math.max(x1, Math.min(x, x2));
+        return weightedAverageSorted(BigDecimal.valueOf(x1), w1, BigDecimal.valueOf(x2), w2)
+            .doubleValue();
+//        assert x1 <= x2;
+//        final double x = (x1 * w1 + x2 * w2) / (w1 + w2);
+//        return Math.max(x1, Math.min(x, x2));
+    }
+
+    private static BigDecimal weightedAverageSorted(BigDecimal x1, double w1, BigDecimal x2,
+        double w2) {
+        assert x1.compareTo(x2) <= 0;
+        //final double x = (x1 * w1 + x2 * w2) / (w1 + w2);
+        final BigDecimal x = (x1.multiply(BigDecimal.valueOf(w1))
+            .add(x2.multiply(BigDecimal.valueOf(w2)))).divide(BigDecimal.valueOf(w1 + w2));
+        //final double x = (x1 * w1 + x2 * w2) / (w1 + w2);
+        final BigDecimal x3 = (x.compareTo(x2) <= 0) ? x : x2;
+        return x1.compareTo(x3) >= 0 ? x1 : x3;
+        // return Math.max(x1, Math.min(x, x2));
     }
 
     static double interpolate(double x, double x0, double x1) {
@@ -90,17 +117,20 @@ public abstract class AbstractTDigest extends TDigest {
 
     /**
      * Computes an interpolated value of a quantile that is between two centroids.
-     *
+     * <p>
      * Index is the quantile desired multiplied by the total number of samples - 1.
      *
-     * @param index              Denormalized quantile desired
-     * @param previousIndex      The denormalized quantile corresponding to the center of the previous centroid.
-     * @param nextIndex          The denormalized quantile corresponding to the center of the following centroid.
-     * @param previousMean       The mean of the previous centroid.
-     * @param nextMean           The mean of the following centroid.
-     * @return  The interpolated mean.
+     * @param index         Denormalized quantile desired
+     * @param previousIndex The denormalized quantile corresponding to the center of the previous
+     *                      centroid.
+     * @param nextIndex     The denormalized quantile corresponding to the center of the following
+     *                      centroid.
+     * @param previousMean  The mean of the previous centroid.
+     * @param nextMean      The mean of the following centroid.
+     * @return The interpolated mean.
      */
-    static double quantile(double index, double previousIndex, double nextIndex, double previousMean, double nextMean) {
+    static double quantile(double index, double previousIndex, double nextIndex,
+        double previousMean, double nextMean) {
         final double delta = nextIndex - previousIndex;
         final double previousWeight = (nextIndex - index) / delta;
         final double nextWeight = (index - previousIndex) / delta;
@@ -108,7 +138,8 @@ public abstract class AbstractTDigest extends TDigest {
     }
 
     /**
-     * Sets up so that all centroids will record all data assigned to them.  For testing only, really.
+     * Sets up so that all centroids will record all data assigned to them.  For testing only,
+     * really.
      */
     @Override
     public TDigest recordAllData() {
