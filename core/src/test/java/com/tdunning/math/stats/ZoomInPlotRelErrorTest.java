@@ -49,10 +49,11 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
     private static final int NumberOfPoints = 200; // number of points where we probe the rank estimates
 
     // params for generating the input
-    private static final int N = 10000000; // 
+    private static final int N = 1000000; // 
     private static final int K = 500; // N / K should be roughly at most 200 (otherwise, we don't have enough precision)
     private static final int PrefixSize = 0; // number of points below zero in each iteration
     private static final int NumberOfRepeats = 400; // N * NumberOfRepeats is (approx.) the number of points in the final instance
+    private static final double lambda = 0.00001; // for exponential distribution
     private static final String InputStreamFileName = "t-digest-genInput";
     private static final String InputStreamFileDir = "/aux/vesely/TD-inputs/"; // CHANGE AS APPROPRIATE
     private static final String DigestStatsFileName = "t-digest-results";
@@ -139,18 +140,20 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
         }
     }
     
-    @Ignore  
+    @Ignore
     public void testZoomInIIDgenerator() throws FileNotFoundException, IOException {
         List<Double> sortedData = new ArrayList<Double>();
         List<Double> data = new ArrayList<Double>();
         Files.createDirectories(Paths.get(InputStreamFileDir));
-        String inputFilePath = InputStreamFileDir + InputStreamFileName + "_IIDitems" + "_N=" + String.valueOf(N) + FileSuffix;
+        String inputFilePath = InputStreamFileDir + InputStreamFileName + "_IIDitems_minusInfty" + "_N=" + String.valueOf(N) + FileSuffix;
         PrintWriter w = new PrintWriter(inputFilePath);
         Random rand = new Random();
         int n;
         final int maxExp = (int)Math.log10(Double.MAX_VALUE / 100);
         for (n = 0; n < N; n++) {
             double item = rand.nextDouble() * Math.pow(10, rand.nextInt(2*maxExp) - maxExp);
+            if (rand.nextDouble() < 0.5)
+            	item = -item;
             data.add(item);
             sortedData.add(item);
             w.println(String.valueOf(item));
@@ -171,7 +174,47 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
             System.out.flush();
 
             writeResults(compr, n, digest, sortedData, DigestStatsDir,
-                DigestStatsDir + DigestStatsFileName + "_IIDitems" + "_N=" + String.valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
+                DigestStatsDir + DigestStatsFileName + "_IIDitems_minusInfty" + "_N=" + String.valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
+                    + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
+        }
+    }
+    
+
+    @Test
+    public void testZoomInExp2IIDgenerator() throws FileNotFoundException, IOException {
+        List<Double> sortedData = new ArrayList<Double>();
+        List<Double> data = new ArrayList<Double>();
+        Files.createDirectories(Paths.get(InputStreamFileDir));
+        String inputFilePath = InputStreamFileDir + InputStreamFileName + "_ZoomInExp2IIDitems_minusInfty" + "_N=" + String.valueOf(N) + FileSuffix;
+        PrintWriter w = new PrintWriter(inputFilePath);
+        Random rand = new Random();
+        int n;
+        final int maxExp = (int)Math.log(Double.MAX_VALUE / 100);
+        for (n = 0; n < N; n++) {
+            double item = (0.5 + rand.nextDouble() / 2) * Math.pow(2, rand.nextInt(2*maxExp) - maxExp);
+            if (rand.nextDouble() < 0.5)
+            	item = -item;            
+            data.add(item);
+            sortedData.add(item);
+            w.println(String.valueOf(item));
+        }
+        Collections.sort(sortedData);
+        w.close();
+        System.out.println("file with generated input: " + inputFilePath);
+        System.out.flush();
+        
+        for (int compr : CompressionsForTesting) {
+            TDigest digest = new MergingDigest(compr);
+            digest.setScaleFunction(ScaleFunction.K_3); //_GLUED;
+            for (double item : data) {
+                digest.add(item);
+            }
+            digest.compress();
+            System.out.println("processing by t-digest done for compression =" + String.valueOf(compr));
+            System.out.flush();
+
+            writeResults(compr, n, digest, sortedData, DigestStatsDir,
+                DigestStatsDir + DigestStatsFileName + "_ZoomInExp2IIDitems_minusInfty" + "_N=" + String.valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
                     + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
         }
     }
@@ -212,7 +255,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
         }
     }
     
-    @Test  
+    @Ignore  
     public void test2DistribUniformIIDgenerator() throws FileNotFoundException, IOException {
         List<Double> sortedData = new ArrayList<Double>();
         List<Double> data = new ArrayList<Double>();
@@ -265,9 +308,11 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
         Random rand = new Random();
         int n;
         for (n = 0; n < N; n++) {
-            double item = (0.99 + rand.nextDouble() / 100) * Double.MAX_VALUE / N;
+            double item = (0.99 + rand.nextDouble() / 100);
             if (rand.nextDouble() < 0.5)
               item = -item;
+            else
+            
             data.add(item);
             sortedData.add(item);
             w.println(String.valueOf(item));
@@ -372,6 +417,44 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
 
             writeResults(compr, n, digest, sortedData, DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + "_clusteredIIDitems" + "_K=" + String.valueOf(K) + "_N=" + String.valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
+                    + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
+        }
+    }
+    
+    @Ignore
+    public void testExpDistribIIDgenerator() throws FileNotFoundException, IOException {
+        List<Double> sortedData = new ArrayList<Double>();
+        List<Double> data = new ArrayList<Double>();
+        Files.createDirectories(Paths.get(InputStreamFileDir));
+        String inputFilePath = InputStreamFileDir + InputStreamFileName + "ExpDistrib" + "_lambda=" + String.valueOf(lambda) + "_N=" + String.valueOf(N) + FileSuffix;
+        PrintWriter w = new PrintWriter(inputFilePath);
+        Random rand = new Random();
+        int n;
+        for (n = 0; n < N; n++) {
+            double item = Math.log(1-rand.nextDouble())/(-lambda);            
+            if (rand.nextDouble() < 0.5)
+              item = -item;
+            data.add(item);
+            sortedData.add(item);
+            w.println(String.valueOf(item));
+        }
+        Collections.sort(sortedData);
+        w.close();
+        System.out.println("file with generated input: " + inputFilePath);
+        System.out.flush();
+        
+        for (int compr : CompressionsForTesting) {
+            TDigest digest = new MergingDigest(compr);
+            digest.setScaleFunction(ScaleFunction.K_2); //_GLUED;
+            for (double item : data) {
+                digest.add(item);
+            }
+            digest.compress();
+            System.out.println("processing by t-digest done for compression =" + String.valueOf(compr));
+            System.out.flush();
+
+            writeResults(compr, n, digest, sortedData, DigestStatsDir,
+                DigestStatsDir + DigestStatsFileName + "ExpDistrib" + "_lambda=" + String.valueOf(lambda) + "_N=" + String.valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
                     + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
         }
     }
@@ -502,6 +585,46 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
                 DigestStatsDir + DigestStatsFileName + "_Float" + "_K=" + String.valueOf(K) + "_N=" + String
                     .valueOf(N) + "_PS=" + String.valueOf(PrefixSize) + "_repeats=" + String
                     .valueOf(NumberOfRepeats) + "-stats-PP_" + String.valueOf(NumberOfPoints)
+                    + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
+        }
+    }
+    
+
+    @Ignore
+    public void testZoomInExp2IIDgeneratorFloat() throws FileNotFoundException, IOException {
+        List<Float> sortedData = new ArrayList<Float>();
+        List<Float> data = new ArrayList<Float>();
+        Files.createDirectories(Paths.get(InputStreamFileDir));
+        String inputFilePath = InputStreamFileDir + InputStreamFileName + "_ZoomInExp2IIDitems_minusInfty_Float" + "_N=" + String.valueOf(N) + FileSuffix;
+        PrintWriter w = new PrintWriter(inputFilePath);
+        Random rand = new Random();
+        int n;
+        final int maxExp = (int)Math.log(Float.MAX_VALUE / 10);
+        for (n = 0; n < N; n++) {
+        	float item = (0.5f + (float)rand.nextDouble() / 2) * (float)Math.pow(2, rand.nextInt(2*maxExp) - maxExp);
+            if (rand.nextDouble() < 0.5)
+            	item = -item;            
+            data.add(item);
+            sortedData.add(item);
+            w.println(String.valueOf(item));
+        }
+        Collections.sort(sortedData);
+        w.close();
+        System.out.println("file with generated input: " + inputFilePath);
+        System.out.flush();
+        
+        for (int compr : CompressionsForTesting) {
+            TDigest digest = new MergingDigest(compr);
+            digest.setScaleFunction(ScaleFunction.K_3); //_GLUED;
+            for (float item : data) {
+                digest.add(item);
+            }
+            digest.compress();
+            System.out.println("processing by t-digest done for compression =" + String.valueOf(compr));
+            System.out.flush();
+
+            writeResultsFloat(compr, n, digest, sortedData, DigestStatsDir,
+                DigestStatsDir + DigestStatsFileName + "_ZoomInExp2IIDitems_minusInfty_Float" + "_N=" + String.valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
                     + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
         }
     }
