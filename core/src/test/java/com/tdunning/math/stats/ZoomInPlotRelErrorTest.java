@@ -53,6 +53,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
     private static final int K = 500; // N / K should be roughly at most 200 (otherwise, we don't have enough precision)
     private static final int PrefixSize = 0; // number of points below zero in each iteration
     private static final int NumberOfRepeats = 400; // for zoom in generator; N * NumberOfRepeats is (approx.) the number of items in the final instance
+    private static final Boolean NegativeNumbers = true; // if false, zoom in generates positive numbers only
     private static final double lambda = 0.00001; // for exponential distribution
     private static final String InputStreamFileName = "t-digest-genInput";
     private static final String InputStreamFileDir = "/aux/vesely/TD-inputs/"; // CHANGE AS APPROPRIATE
@@ -145,14 +146,14 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
         List<Double> sortedData = new ArrayList<Double>();
         List<Double> data = new ArrayList<Double>();
         Files.createDirectories(Paths.get(InputStreamFileDir));
-        String inputFilePath = InputStreamFileDir + InputStreamFileName + "_zoominIIDitems" + "_N=" + String.valueOf(N) + FileSuffix;
+        String inputFilePath = InputStreamFileDir + InputStreamFileName + "_zoominIIDitems" + (NegativeNumbers ? "_wNegativeNumbers" : "_PositiveOnly") + "_N=" + String.valueOf(N) + FileSuffix;
         PrintWriter w = new PrintWriter(inputFilePath);
         Random rand = new Random();
         int n;
         final int maxExp = (int)(Math.log(Double.MAX_VALUE / 100) / Math.log(2));
         for (n = 0; n < N; n++) {
             double item = Math.pow(2, (rand.nextDouble() - 0.5) * 2 * maxExp);
-            if (rand.nextDouble() < 0.5)
+            if (NegativeNumbers && rand.nextDouble() < 0.5)
             	item = -item;
             data.add(item);
             sortedData.add(item);
@@ -165,7 +166,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
         
         for (int compr : CompressionsForTesting) {
             TDigest digest = new MergingDigest(compr);
-            digest.setScaleFunction(ScaleFunction.K_3); //_GLUED;
+            digest.setScaleFunction(ScaleFunction.K_2); //_GLUED;
             for (double item : data) {
                 digest.add(item);
             }
@@ -174,7 +175,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
             System.out.flush();
 
             writeResults(compr, n, digest, sortedData, DigestStatsDir,
-                DigestStatsDir + DigestStatsFileName + "_zoominIIDitems" + "_N=" + String.valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
+                DigestStatsDir + DigestStatsFileName + "_zoominIIDitems" + "_zoominIIDitems" + (NegativeNumbers ? "_wNegativeNumbers" : "_PositiveOnly") + "_N=" + String.valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
                     + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
         }
     }
