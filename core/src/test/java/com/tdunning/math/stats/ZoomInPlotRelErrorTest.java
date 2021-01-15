@@ -45,20 +45,23 @@ import org.junit.Ignore;
 public class ZoomInPlotRelErrorTest extends AbstractTest {
 
     private static final int[] CompressionsForTesting = {
-        500}; //100, 200, 500, 1000, 5000, 10000}; // param delta of t-digest
+        100}; //100, 200, 500, 1000, 5000, 10000}; // param delta of t-digest
     private static final int NumberOfPoints = 200; // number of points where we probe the rank estimates
 
     // params for generating the input
-    private static final int N = 10000000; // stream length 
-    private static final int K = 500; // N / K should be roughly at most 200 (otherwise, we don't have enough precision)
+    private static final int N = 1000000; // stream length 
+    private static final int K = 100; // N / K should be roughly at most 200 (otherwise, we don't have enough precision)
     private static final int PrefixSize = 0; // number of points below zero in each iteration
     private static final int NumberOfRepeats = 400; // for zoom in generator; N * NumberOfRepeats is (approx.) the number of items in the final instance
     private static final Boolean NegativeNumbers = true; // if false, zoom in generates positive numbers only
+    private static final Boolean WriteCentroidData = false; 
     private static final double lambda = 0.00001; // for exponential distribution
     private static final String InputStreamFileName = "t-digest-genInput";
-    private static final String InputStreamFileDir = "../../../../data/inputs/"; // // CHANGE AS APPROPRIATE
+    private static final String InputStreamFileDir = "../../../../data/inputs/";
+    //private static final String InputStreamFileDir = "/aux/vesely/TD-inputs/"; // // CHANGE AS APPROPRIATE
     private static final String DigestStatsFileName = "t-digest-results";
-    private static final String DigestStatsDir = "../../../../data/results/"; // CHANGE AS APPROPRIATE
+    private static final String DigestStatsDir = "../../../../data/results/";
+    //private static final String DigestStatsDir = "../../../../TD-stats/"; // CHANGE AS APPROPRIATE
     private static final String FileSuffix = ".csv";
     //private static final String StatsFileDir = "/home/vesely/research/biasedQuantiles/TD-stats/"; // CHANGE AS APPROPRIATE
 
@@ -143,7 +146,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
         }
     }
 
-    @Ignore
+    @Test
     public void testZoomInIIDgenerator() throws FileNotFoundException, IOException {
         List<Double> sortedData = new ArrayList<Double>();
         List<Double> data = new ArrayList<Double>();
@@ -181,13 +184,14 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
                 .println("processing by t-digest done for compression =" + String.valueOf(compr));
             System.out.flush();
 
-            writeCentroidData(digest,
-                DigestStatsDir + DigestStatsFileName + "_zoominIIDitems" + "_N=" + String.valueOf(N)
-                    + "-centroids-PP_" + String.valueOf(NumberOfPoints)
-                    + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
+            if (WriteCentroidData)
+                writeCentroidData(digest,
+                      DigestStatsDir + DigestStatsFileName + "_zoominIIDitems" + "_N=" + String.valueOf(N)
+                        + "-centroids-PP_" + String.valueOf(NumberOfPoints)
+                        + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
 
             writeResults(compr, n, digest, sortedData, DigestStatsDir,
-                DigestStatsDir + DigestStatsFileName + "_zoominIIDitems" + "_zoominIIDitems" + (
+                DigestStatsDir + DigestStatsFileName + "_zoominIIDitems" + (
                     NegativeNumbers ? "_wNegativeNumbers" : "_PositiveOnly") + "_N=" + String
                     .valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
                     + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
@@ -479,9 +483,10 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
         //System.out.flush();
 
         fwout.write("true quantile;true rank;est. rank;rel. error;abs. error;item\n");
-        for (int t = 0; t < NumberOfPoints; t++) {
+        for (int t = 0; t <= NumberOfPoints; t++) {
             //THE FOLLOWING IS EXTREMELY SLOW: Dist.cdf(item, sortedData);
             int rTrue = (int) Math.ceil(t / (float) NumberOfPoints * size) + 1;
+            if (rTrue > size) rTrue--;
             double item = sortedData.get(rTrue - 1);
             // handling duplicate values -- rank is then rather an interval
             int rTrueMin = rTrue;
