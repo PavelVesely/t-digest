@@ -121,69 +121,73 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
         }
     }
 
-
+    //mvn test -Dtests.seed=1639B3E7B594EF9 -DrunSlowTests=false -Dtests.class=com.tdunning.math.stats.ZoomInPlotRelErrorTest
+    //      	at __randomizedtesting.SeedInfo.seed([1639B3E7B594EF9:39272979715260C0]:0)
     @Test
     public void carefulNested() throws Exception {
 
-        BigDecimal EPSILON = BigDecimal.valueOf(Double.MIN_VALUE);
+        BigDecimal EPSILON = BigDecimal.valueOf(0.01); //BigDecimal.valueOf(Double.MIN_VALUE);
 
         double delta = 500;
         //double delta = 1000;
 
         List<BigDecimal> data = new ArrayList<>();
         MergingDigest digest = new MergingDigest(delta);
+        //AVLTreeDigest digest = new AVLTreeDigest(delta);
         digest.setScaleFunction(ScaleFunction.K_0);
         digest.setUseAlternatingSort(false);
 
-        int initializingHalfBatchSize = (int) Math.floor(delta * 10);
+        int initializingHalfBatchSize = (int) Math.floor(delta * 20);
 
         // delta=500, denom=100000 seems to work okay..
 
-        double denom = 100000d;
+        double denom = 1000000000d;
         //denom *= 100;
         BigDecimal infty = BigDecimal
             .valueOf((Double.MAX_VALUE) / denom); // so we can safely average
-
         BigDecimal increment = infty.divide(BigDecimal.valueOf(initializingHalfBatchSize));
 
-        for (int i = 0; i < 2 * initializingHalfBatchSize; i++) {
-            BigDecimal point = BigDecimal.valueOf(-1).multiply(infty);
-            for (int j = 0; j < i; j++) {
-                point = point.add(increment);
-            }
+        for (int i = 0; i < initializingHalfBatchSize; i++) {
+            //BigDecimal point = BigDecimal.valueOf(-1).multiply(infty);
+            BigDecimal point = BigDecimal.TEN.multiply(BigDecimal.valueOf(-1d));
+//            for (int j = 0; j < i; j++) {
+//                point = point.add(increment);
+//            }
+            point = point.add(increment.multiply(BigDecimal.valueOf(i)));
             data.add(point);
             digest.add(point);
         }
-        digest.compress();
-
-        // add a glob of zeroes, aim for error there?!?!?!?
+        // add a glob of zeroes, aim for error there.
         for (int j = 0; j < 5 * initializingHalfBatchSize; j++) {
-            data.add(BigDecimal.valueOf(0d));
-            digest.add(BigDecimal.valueOf(0d));
+            data.add(BigDecimal.ZERO);
+            digest.add(BigDecimal.ZERO);
         }
         digest.compress();
 
-        Centroid centroidToAttack = belowValue(BigDecimal.ZERO, digest.centroids());
-        System.out.println(centroidToAttack);
-        BigDecimal centerOfAttack = centroidToAttack.bigMean();
-        int weightToRight = 0;
-        for (Centroid centroid : digest.centroids()) {
-            if (centroid.bigMean().compareTo(centerOfAttack) > 0) {
-                weightToRight += centroid.count();
-            }
-        }
+        Centroid centroidToAttack = belowValue(BigDecimal.TEN, digest.centroids());
+        Centroid rightNeighbor = aboveValue(centroidToAttack.bigMean(), digest.centroids());
 
+        BigDecimal centerOfAttack = centroidToAttack.bigMean();
+        BigDecimal centerOfRightNeighbor = rightNeighbor.bigMean();
+
+        double weightToRight;
         double weightToLeft;
         int its = 0;
         int weightGoal;
         int currentDeficit;
         int weightOfAttacked;
 
+        int currentDeficitRight;
+        int weightOfRightNeighbor;
+
         Collections.sort(data);
         BigDecimal nextStreamValue = nextValue(centerOfAttack, data);
 
         BigDecimal previous_c;
         BigDecimal previous_y;
+
+        double maximalError = 0;
+        int indexError = 0;
 
         while (true) {
             its++;
@@ -194,7 +198,17 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
             centerOfAttack = centroidToAttack.bigMean();
             weightOfAttacked = centroidToAttack.count();
 
-            weightToLeft = digest.size() - weightOfAttacked - weightToRight;
+            centerOfRightNeighbor = rightNeighbor.bigMean();
+            weightOfRightNeighbor = rightNeighbor.count();
+
+            weightToRight = 0;
+            for (Centroid centroid : digest.centroids()) {
+                if (centroid.bigMean().compareTo(centerOfRightNeighbor) > 0) {
+                    weightToRight += centroid.count();
+                }
+            }
+
+            weightToLeft = digest.size() - weightOfAttacked - weightOfRightNeighbor - weightToRight;
 
             Collections.sort(data);
             nextStreamValue = nextValue(centerOfAttack, data);
@@ -202,49 +216,201 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
                 break;
             }
 
+            if (its > 1) {
+                if (previous_c.compareTo(centerOfAttack) > 0) {
+                    System.out.println(String
+                        .format("previous center: %f\n current: %f\n", previous_c, centerOfAttack));
+                    throw new Exception("wrongly ordered, you probably ran out of precision");
+                }
+                if (nextStreamValue.compareTo(previous_y) > 0) {
+                    System.out.println(String
+                        .format("current next: %f\nprevious: %f\n", nextStreamValue, previous_y));
+                    throw new Exception("wrongly ordered, you probably ran out of precision");
+                }
+            }
+
             // weight of the centroid we will fabricate
-            weightGoal = (int) Math.ceil((weightToLeft + weightToRight) / ((delta / 2d) - 2d));
+            // this is the formula for K_0
+            // we also maintain centroid to the right of the attack
+            weightGoal = (int) Math.floor((weightToLeft + weightToRight) / ((delta / 2d) - 3d));
+
+            System.out.println(
+                "centroids exceeding goal at start: " + centroidsExceedingCount(digest.centroids(),
+                    weightGoal));
+
             currentDeficit = weightGoal - weightOfAttacked;
             assert currentDeficit >= 0;
 
+            double EPS = .001;
+            double EPS_2 = .01;
+
             // fill up the old one
+            BigDecimal point = convexCombination(nextStreamValue, centerOfAttack, EPSILON);
             for (int v = 0; v < currentDeficit; v++) {
-                BigDecimal point = centerOfAttack.add(EPSILON);
+                //double point = centerOfAttack + (nextStreamValue - centerOfAttack) / 10000; // * onePlus; //no Plus Epsilon
                 digest.add(point, 1);
                 data.add(point);
             }
+            //digest.compress();
 
             // make the new one
-            BigDecimal anotherPoint = centerOfAttack.add(EPSILON).add(EPSILON);
-            digest.add(anotherPoint, 1);
+            BigDecimal anotherPoint = convexCombination(nextStreamValue, centerOfAttack,
+                EPSILON.multiply(BigDecimal.valueOf(2d)));
+            digest.add(anotherPoint, 3);
             data.add(anotherPoint);
 
-            BigDecimal leftEdge = nextStreamValue.subtract(EPSILON);
-            for (int v = 0; v < weightGoal - 2; v++) {
+            BigDecimal leftEdge = convexCombination(centerOfAttack, nextStreamValue, EPSILON);
+            for (int v = 0; v < weightGoal - 3; v++) {
                 digest.add(leftEdge, 1);
                 data.add(leftEdge);
             }
 
-            digest.compress();
-            centroidToAttack = aboveValue(anotherPoint, digest.centroids());
+            // fill up the centroid to the right
+            currentDeficitRight = weightGoal - rightNeighbor.count();
+            assert currentDeficit >= 0;
+            //Centroid rightCentroid = aboveValue(leftEdge, digest.centroids());
+            //int deficit = weightGoal - rightCentroid.count();
+            BigDecimal rightCentroidVal = rightNeighbor.bigMean();
+            for (int pp = 0; pp < currentDeficitRight; pp++) {
+                digest.add(rightCentroidVal);
+                data.add(rightCentroidVal);
+            }
+//
+//            System.out.println(String
+//                .format("%s\n\n%s\n\n%f\n\n%f\n\n%f\n\n", centerOfAttack, point, anotherPoint, leftEdge,
+//                    nextStreamValue));
 
-            BigDecimal bad_point = (centerOfAttack.add(nextStreamValue))
-                .divide(BigDecimal.valueOf(2d));
+            printComparison(centerOfAttack, point);
+            printComparison(point, anotherPoint);
+            printComparison(anotherPoint, leftEdge);
+            printComparison(leftEdge, nextStreamValue);
+
+            digest.compress();
+
+            System.out.println(
+                "centroids exceeding goal at end: " + centroidsExceedingCount(digest.centroids(),
+                    weightGoal - 1));
+
+            int a = countCentroids(centerOfAttack, point, digest.centroids());
+            int b = countCentroids(anotherPoint, leftEdge, digest.centroids());
+            int c = countCentroids(leftEdge, rightCentroidVal, digest.centroids());
+            int t = countCentroids(centerOfAttack, rightCentroidVal, digest.centroids());
+            int d = countCentroids(rightCentroidVal, rightCentroidVal.multiply(BigDecimal.TEN),
+                digest.centroids());
+
+            int maxCount = 0;
+            for (Centroid centroid : digest.centroids()) {
+                if (centroid.count() > maxCount) {
+                    maxCount = centroid.count();
+                }
+            }
+            System.out.println("weight goal was: " + weightGoal + "; max weight is: " + maxCount);
+
+            System.out.println("oldCenter to point (expect 1): " + a);
+            System.out.println("another to leftEdge (expect 1): " + b);
+            System.out.println("leftTo to oldRight (expect 1):" + c);
+            System.out.println("oldCenter to oldRight (total, 3?):" + t);
+            System.out.println("to the right: " + d);
+
+            BigDecimal bad_point = convexCombination(centerOfAttack, nextStreamValue, EPSILON);
             Collections.sort(data);
 
             System.out.println("finished iteration: " + its);
             System.out.println("td " + digest.cdf(bad_point));
             System.out
-                .println("truth " + countBelow(bad_point, data) / (double) data.size() + "\n");
+                .println("truth " + countBelow(bad_point, data) / (double) data.size());
 
+            double error = Math
+                .abs(digest.cdf(bad_point) - countBelow(bad_point, data) / (double) data.size());
+
+            if (error > maximalError) {
+                maximalError = error;
+                indexError = its;
+            }
+            System.out.println("maximal error so far: " + maximalError + " on " + indexError);
+            System.out.println("num centroids: " + digest.centroids().size() + "\n");
+
+            // hmmm ....
+            centroidToAttack = aboveValue(convexCombination(anotherPoint, leftEdge, 0.99999),
+                digest.centroids());
+            //centroidToAttack = belowValue(leftEdge, digest.centroids());
+            if (nextValue(centroidToAttack.bigMean(), data).compareTo(nextStreamValue) > 0) {
+                System.out.println("odd next val orderings");
+                centroidToAttack = belowValue(
+                    centroidToAttack.bigMean().subtract(BigDecimal.valueOf(Double.MIN_VALUE)),
+                    digest.centroids());
+            }
+
+            if (centroidToAttack.bigMean().compareTo(centerOfAttack) < 0) {
+                System.out.println("wtf");
+            }
+            rightNeighbor = aboveValue(centroidToAttack.bigMean(), digest.centroids());
+
+            detectDupes(digest.centroids());
         }
 
-        BigDecimal bad_point = (previous_c.add(previous_y)).divide(BigDecimal.valueOf(2d));
+        BigDecimal bad_point = convexCombination(previous_c, previous_y,
+            0.5); //previous_c + previous_y) / 2d;
         Collections.sort(data);
 
         System.out.println("td " + digest.cdf(bad_point));
         System.out.println("truth " + countBelow(bad_point, data) / (double) data.size());
         System.out.println("iterations" + its);
+    }
+
+    private void detectDupes(Collection<Centroid> centroids) {
+        Iterator<Centroid> centroidIterator = centroids.iterator();
+        Centroid centroid = centroidIterator.next();
+        Centroid previous = null;
+        while (centroidIterator.hasNext()) {
+            if (previous != null) {
+                if (previous.bigMean() == centroid.bigMean()) {
+                    System.out.println("dupe!");
+                }
+            }
+            previous = centroid;
+            centroid = centroidIterator.next();
+        }
+    }
+
+    private void printComparison(BigDecimal v1, BigDecimal v2) throws Exception {
+        if (v1.compareTo(v2) > 0) {
+            System.out.println(String
+                .format("should be smaller: %f\n\n should be larger: %f\n\n", v1, v2));
+            throw new Exception("wrongly ordered, you probably ran out of precision");
+        }
+    }
+
+    private BigDecimal convexCombination(BigDecimal val1, BigDecimal val2, BigDecimal alpha) {
+        return val1.multiply(alpha).add(val2.multiply(BigDecimal.ONE.subtract(alpha)));
+    }
+
+    private BigDecimal convexCombination(BigDecimal val1, BigDecimal val2, double alphaDouble) {
+        BigDecimal alpha = BigDecimal.valueOf(alphaDouble);
+        return val1.multiply(alpha).add(val2.multiply(BigDecimal.ONE.subtract(alpha)));
+    }
+
+    private int centroidsExceedingCount(Collection<Centroid> centroids, int countThreshold) {
+        int j = 0;
+        for (Centroid c : centroids) {
+            if (c.count() >= countThreshold) {
+                j++;
+            }
+        }
+        return j;
+    }
+
+    private int countCentroids(BigDecimal lowerBound, BigDecimal upperBound,
+        Collection<Centroid> centroids) {
+        int count = 0;
+        for (Centroid c : centroids) {
+            if (c.bigMean().compareTo(lowerBound) >= 0 && c.bigMean().compareTo(upperBound) <= 0) {
+                count++;
+                System.out.println("count " + c.count());
+            }
+        }
+        System.out.println("\n");
+        return count;
     }
 
     // assume centroids in ascending order
