@@ -50,7 +50,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
 
     // params for generating the input
     private static final int N = 10000000; // stream length 
-    private static final int K = 5; // N / K should be roughly at most 200 (otherwise, we don't have enough precision)
+    private static final int K = 2; // N / K should be roughly at most 200 (otherwise, we don't have enough precision)
     private static final int PrefixSize = 0; // number of points below zero in each iteration
     private static final int NumberOfRepeats = 400; // for zoom in generator; N * NumberOfRepeats is (approx.) the number of items in the final instance
     private static final Boolean NegativeNumbers = true; // if false, zoom in generates positive numbers only
@@ -844,11 +844,11 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
     
 
     @Test
-    public void carefulNestedAroundZere() throws Exception {
+    public void carefulNestedAroundZero() throws Exception {
 
         double EPSILON = Double.MIN_VALUE;
 
-        double delta = 100;
+        double delta = 500;
         //double delta = 1000;
 
         List<Double> data = new ArrayList<>();
@@ -860,7 +860,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
 
         // delta=500, denom=100000 seems to work okay..
 
-        double denom = 10000000d;
+        double denom = 10000000000d;
         //denom *= 100;
         double infty = (Double.MAX_VALUE) / denom; // so we can safely average
 
@@ -997,13 +997,12 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
                 digest.add(rightCentroidVal);
                 data.add(rightCentroidVal);
             }
-            digest.compress();
 
             // make the new one
             int v = 0;
             double anotherPoint = centerOfAttack * (1d - EPS_2) + nextStreamValue * EPS_2;
             
-            double leftEdge = nextStreamValue * EPS; //centerOfAttack * EPS + 
+            double leftEdge = nextStreamValue * 0.1; //centerOfAttack * EPS + 
             
             for (; v < weightGoal / 5; v++) {
                 digest.add(anotherPoint);
@@ -1024,7 +1023,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
                 "centroids exceeding goal at end: " + centroidsExceedingCount(digest.centroids(),
                     weightGoal - 1));
 
-            double bad_point = centerOfAttack * .00000000001 + nextStreamValue * (1 - .00000000001);
+            double bad_point = 0; //centerOfAttack * .00000000001 + nextStreamValue * (1 - .00000000001);
             Centroid belowZeroC = belowValue(0, digest.centroids());
             Centroid aboveZeroC = aboveValue(0, digest.centroids());
             //double bad_point = belowZeroC.mean();
@@ -1049,10 +1048,14 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
             System.out.println("num centroids: " + digest.centroids().size() + "\n");
 
             //double yetAnotherPoint = centerOfAttack * 0.9 + nextStreamValue * ;
-            centroidToAttack = aboveValue(centerOfAttack, digest.centroids()); //centerOfAttack
+            centroidToAttack = aboveValue(anotherPoint, digest.centroids()); //centerOfAttack
             if (centroidToAttack.mean() < centerOfAttack) {
-                System.out.println("wtf");
+                System.out.println("wtf: centroidToAttack.mean()=" + centroidToAttack.mean() + " < centerOfAttack");
             }
+            //if (centroidToAttack.mean() > 0) {
+            //  System.out.println("above zero: centroidToAttack.mean()=" + centroidToAttack.mean());
+            //  centroidToAttack = belowZeroC;
+            //}
             rightNeighbor = aboveValue(centroidToAttack.mean(), digest.centroids());
         }
 
@@ -1112,7 +1115,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
             index++;
         }
         assert sortedData.get(index) > c;
-        assert sortedData.get(index - 1) <= c;
+        assert index == 0 || sortedData.get(index - 1) <= c;
         return sortedData.get(index);
     }
 
