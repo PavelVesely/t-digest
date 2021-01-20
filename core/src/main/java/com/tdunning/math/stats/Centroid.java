@@ -189,8 +189,15 @@ public class Centroid implements Comparable<Centroid>, Serializable {
     @Override
     public int compareTo(@SuppressWarnings("NullableProblems") Centroid o) {
         //int r = Double.compare(centroid, o.centroid);
+//
+//        int r = centroid.compareTo(o.centroid);
+//        if (r == 0) {
+//            r = id - o.id;
+//        }
+//        return r;
         int r = centroid.compareTo(o.centroid);
-        if (r == 0) {
+        if ((centroid.subtract(o.centroid).abs().compareTo(BigDecimal.valueOf(Double.MIN_VALUE)) < 0)) {
+            System.out.println("randomness intensifies");
             r = id - o.id;
         }
         return r;
