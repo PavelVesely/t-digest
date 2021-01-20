@@ -49,13 +49,13 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
     private static final int NumberOfPoints = 200; // number of points where we probe the rank estimates
 
     // params for generating the input
-    private static final int N = 1000000; // stream length 
-    private static final int K = 100; // N / K should be roughly at most 200 (otherwise, we don't have enough precision)
+    private static final int N = 10000000; // stream length 
+    private static final int K = 5; // N / K should be roughly at most 200 (otherwise, we don't have enough precision)
     private static final int PrefixSize = 0; // number of points below zero in each iteration
     private static final int NumberOfRepeats = 400; // for zoom in generator; N * NumberOfRepeats is (approx.) the number of items in the final instance
     private static final Boolean NegativeNumbers = true; // if false, zoom in generates positive numbers only
     private static final Boolean WriteCentroidData = false; 
-    private static final double lambda = 0.00001; // for exponential distribution
+    private static final double lambda = 0.000001; // for exponential distribution
     private static final String InputStreamFileName = "t-digest-genInput";
     private static final String InputStreamFileDir = "../../../../data/inputs/";
     //private static final String InputStreamFileDir = "/aux/vesely/TD-inputs/"; // // CHANGE AS APPROPRIATE
@@ -146,7 +146,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
         }
     }
 
-    @Test
+    @Ignore
     public void testZoomInIIDgenerator() throws FileNotFoundException, IOException {
         List<Double> sortedData = new ArrayList<Double>();
         List<Double> data = new ArrayList<Double>();
@@ -393,7 +393,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
         final int maxExp = (int) Math.log10(Double.MAX_VALUE / 100);
         for (n = 0; n < N; n++) {
             double item =
-                (0.99 + rand.nextDouble() / 100000000) * rand.nextInt(K) * (Double.MAX_VALUE / (N
+                (0.9999 + rand.nextDouble() / 100000000) * (rand.nextInt(K) + 1) * (Double.MAX_VALUE / (N
                     * K));
             if (rand.nextDouble() < 0.5) {
                 item = -item;
@@ -651,8 +651,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
         }
     }
 
-
-    @Test
+    @Ignore
     public void carefulNested() throws Exception {
 
         double EPSILON = Double.MIN_VALUE;
@@ -829,6 +828,228 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
             System.out.println("num centroids: " + digest.centroids().size() + "\n");
 
             centroidToAttack = aboveValue(centerOfAttack, digest.centroids());
+            if (centroidToAttack.mean() < centerOfAttack) {
+                System.out.println("wtf");
+            }
+            rightNeighbor = aboveValue(centroidToAttack.mean(), digest.centroids());
+        }
+
+        double bad_point = (previous_c + previous_y) / 2d;
+        Collections.sort(data);
+
+        System.out.println("td " + digest.cdf(bad_point));
+        System.out.println("truth " + countBelow(bad_point, data) / (double) data.size());
+        System.out.println("iterations" + its);
+    }
+    
+
+    @Test
+    public void carefulNestedAroundZere() throws Exception {
+
+        double EPSILON = Double.MIN_VALUE;
+
+        double delta = 100;
+        //double delta = 1000;
+
+        List<Double> data = new ArrayList<>();
+        MergingDigest digest = new MergingDigest(delta);
+        digest.setScaleFunction(ScaleFunction.K_0);
+        digest.setUseAlternatingSort(false);
+
+        int initializingHalfBatchSize = (int) Math.floor(delta * 10);
+
+        // delta=500, denom=100000 seems to work okay..
+
+        double denom = 10000000d;
+        //denom *= 100;
+        double infty = (Double.MAX_VALUE) / denom; // so we can safely average
+
+        double increment = infty / initializingHalfBatchSize;
+        System.out.println("infty:\t" + infty + "\ninitializingHalfBatchSize: \t" + initializingHalfBatchSize);
+        
+        // add a glob of zeroes, aim for error there.
+//        for (int j = 0; j < 5 * initializingHalfBatchSize; j++) {
+//            data.add(0d);
+//            digest.add(0d);
+//        }
+//
+//        for (int i = 0; i < 2 * initializingHalfBatchSize; i++) {
+//            double point = -infty;
+//            for (int j = 0; j < i; j++) {
+//                point += increment;
+//            }
+//            data.add(point);
+//            digest.add(point);
+//        }
+        for (int i = 0; i < 2 * initializingHalfBatchSize; i++) {
+          data.add(-infty);
+          digest.add(-infty);
+          data.add(infty);
+          digest.add(infty);
+        }
+        digest.compress();
+
+        Centroid centroidToAttack = belowValue(0d, digest.centroids());
+        Centroid rightNeighbor = aboveValue(centroidToAttack.mean(), digest.centroids());
+
+        double centerOfAttack = centroidToAttack.mean();
+        double centerOfRightNeighbor = rightNeighbor.mean();
+
+        double weightToRight;
+        double weightToLeft;
+        int its = 0;
+        int weightGoal;
+        int currentDeficit;
+        int weightOfAttacked;
+
+        int currentDeficitRight;
+        int weightOfRightNeighbor;
+
+        Collections.sort(data);
+        double nextStreamValue = nextValue(centerOfAttack, data);
+
+        double previous_c;
+        double previous_y;
+
+        double maximalError = 0;
+        int indexError = 0;
+
+        while (true) {
+            its++;
+
+            previous_c = centerOfAttack;
+            previous_y = nextStreamValue;
+
+            centerOfAttack = centroidToAttack.mean();
+            weightOfAttacked = centroidToAttack.count();
+
+            centerOfRightNeighbor = rightNeighbor.mean();
+            weightOfRightNeighbor = rightNeighbor.count();
+
+            weightToRight = 0;
+            for (Centroid centroid : digest.centroids()) {
+                if (centroid.mean() > centerOfRightNeighbor) {
+                    weightToRight += centroid.count();
+                }
+            }
+
+            weightToLeft = digest.size() - weightOfAttacked - weightOfRightNeighbor - weightToRight;
+
+            Collections.sort(data);
+            nextStreamValue = nextValue(0, data); //centerOfAttack
+            
+            if (nextStreamValue < 100*Double.MIN_VALUE) {
+                System.out.println(String
+                  .format("too small nextStreamValue:\t%s", nextStreamValue));
+                break;
+            }
+            
+            if (!(centerOfAttack < nextStreamValue)) {
+                System.out.println(String
+                  .format("centerOfAttack < nextStreamValue: nextStreamValue:\t%s\ncenterOfAttack:\t%s\n", nextStreamValue, centerOfAttack));
+                break;
+            }
+
+            if (its > 1) {
+                if ((previous_c > centerOfAttack)) {
+                    System.out.println(String
+                        .format("previous_c:\t%s\ncenterOfAttack:\t%s\n", previous_c, centerOfAttack));
+                    throw new Exception("previous_c > centerOfAttac: wrongly ordered, you probably ran out of precision");
+                }
+                if (nextStreamValue > previous_y) {
+                    System.out.println(String
+                        .format("nextStreamValue:\t%s\nprevious_y:\t%s\n", nextStreamValue, previous_y));
+                    throw new Exception("nextStreamValue > previous_y: wrongly ordered, you probably ran out of precision");
+                }
+            }
+
+            // weight of the centroid we will fabricate
+            // this is the formula for K_0
+            // we also maintain centroid to the right of the attack
+            System.out.println("centroids count: " + digest.centroids().size());
+            weightGoal = (int) Math.ceil((weightToLeft + weightToRight) / ((delta / 2d) - 3d));
+            System.out.println("weightGoal: " + weightGoal);
+
+            System.out.println(
+                "centroids exceeding goal at start: " + centroidsExceedingCount(digest.centroids(),
+                    weightGoal));
+            currentDeficit = weightGoal - weightOfAttacked;
+            assert currentDeficit >= 0;
+
+            double EPS = .001;
+            double EPS_2 = .01;
+
+            // fill up the old one
+            double point = centerOfAttack; // * (1d - EPS) + nextStreamValue * EPS;
+            for (int v = 0; v < currentDeficit; v++) {
+                //double point = centerOfAttack + (nextStreamValue - centerOfAttack) / 10000; // * onePlus; //no Plus Epsilon
+                digest.add(point, 1);
+                data.add(point);
+            }
+
+            // fill up the centroid to the right
+            currentDeficitRight = weightGoal - rightNeighbor.count();
+            assert currentDeficit >= 0;
+            //Centroid rightCentroid = aboveValue(leftEdge, digest.centroids());
+            //int deficit = weightGoal - rightCentroid.count();
+            double rightCentroidVal = rightNeighbor.mean();
+            for (int pp = 0; pp < currentDeficitRight; pp++) {
+                digest.add(rightCentroidVal);
+                data.add(rightCentroidVal);
+            }
+            digest.compress();
+
+            // make the new one
+            int v = 0;
+            double anotherPoint = centerOfAttack * (1d - EPS_2) + nextStreamValue * EPS_2;
+            
+            double leftEdge = nextStreamValue * EPS; //centerOfAttack * EPS + 
+            
+            for (; v < weightGoal / 5; v++) {
+                digest.add(anotherPoint);
+                data.add(anotherPoint);
+            }            
+            for (; v < weightGoal; v++) {
+                digest.add(leftEdge, 1);
+                data.add(leftEdge);
+            }
+
+            System.out.println(String
+                .format("centerOfAttack:\t%s\npoint:\t\t%s\nanotherPoint:\t%s\nleftEdge:  \t%s\nnextStreamValue:\t%s", centerOfAttack, point, anotherPoint, leftEdge,
+                    nextStreamValue));
+
+            digest.compress();
+
+            System.out.println(
+                "centroids exceeding goal at end: " + centroidsExceedingCount(digest.centroids(),
+                    weightGoal - 1));
+
+            double bad_point = centerOfAttack * .00000000001 + nextStreamValue * (1 - .00000000001);
+            Centroid belowZeroC = belowValue(0, digest.centroids());
+            Centroid aboveZeroC = aboveValue(0, digest.centroids());
+            //double bad_point = belowZeroC.mean();
+            Collections.sort(data);
+
+            System.out.println("finished iteration: " + its);
+            System.out.println("belowZeroC mean: " + belowZeroC.mean());
+            System.out.println("aboveZeroC mean: " + aboveZeroC.mean());
+            System.out.println("bad point: " + bad_point);
+            System.out.println("td " + digest.cdf(bad_point));
+            System.out
+                .println("truth " + countBelow(bad_point, data) / (double) data.size());
+
+            double error = Math
+                .abs(digest.cdf(bad_point) - countBelow(bad_point, data) / (double) data.size());
+
+            if (error > maximalError) {
+                maximalError = error;
+                indexError = its;
+            }
+            System.out.println("maximal error so far: " + maximalError + " on " + indexError);
+            System.out.println("num centroids: " + digest.centroids().size() + "\n");
+
+            //double yetAnotherPoint = centerOfAttack * 0.9 + nextStreamValue * ;
+            centroidToAttack = aboveValue(centerOfAttack, digest.centroids()); //centerOfAttack
             if (centroidToAttack.mean() < centerOfAttack) {
                 System.out.println("wtf");
             }
