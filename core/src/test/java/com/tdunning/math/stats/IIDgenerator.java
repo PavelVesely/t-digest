@@ -105,7 +105,7 @@ public class IIDgenerator  {
         PrintWriter w = new PrintWriter(inputFilePath);
         rand = new Random();
         
-        maxExpBase2 = (int) (Math.log(Double.MAX_VALUE / 10000) / Math.log(2));
+        maxExpBase2 = (int) (Math.log(Double.MAX_VALUE / N) / Math.log(2));
         for (n = 0; n < N; n++) {
             double item = generateItem();
             data.add(item);
