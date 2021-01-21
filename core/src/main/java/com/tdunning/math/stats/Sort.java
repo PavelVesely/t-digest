@@ -23,7 +23,7 @@ import java.util.Random;
  * Static sorting methods
  */
 public class Sort {
-    private static final Random prng = new Random(); // for choosing pivots during quicksort
+    private static final Random prng = new Random(123456789L); // for choosing pivots during quicksort
     /**
      * Quick sort using an index array.  On return,
      * values[order[i]] is in order as i goes 0..values.length
