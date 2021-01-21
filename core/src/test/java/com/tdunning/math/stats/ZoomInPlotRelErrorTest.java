@@ -64,7 +64,9 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
     //private static final String DigestStatsDir = "../../../../TD-stats/"; // CHANGE AS APPROPRIATE
     private static final String FileSuffix = ".csv";
     //private static final String StatsFileDir = "/home/vesely/research/biasedQuantiles/TD-stats/"; // CHANGE AS APPROPRIATE
-
+    
+    
+    
     @BeforeClass
     public static void freezeSeed() {
         RandomUtils.useTestSeed();
@@ -987,16 +989,6 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
                 data.add(point);
             }
 
-            // fill up the centroid to the right
-            currentDeficitRight = weightGoal - rightNeighbor.count();
-            assert currentDeficit >= 0;
-            //Centroid rightCentroid = aboveValue(leftEdge, digest.centroids());
-            //int deficit = weightGoal - rightCentroid.count();
-            double rightCentroidVal = rightNeighbor.mean();
-            for (int pp = 0; pp < currentDeficitRight; pp++) {
-                digest.add(rightCentroidVal);
-                data.add(rightCentroidVal);
-            }
 
             // make the new one
             int v = 0;
@@ -1011,6 +1003,18 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
             for (; v < weightGoal; v++) {
                 digest.add(leftEdge, 1);
                 data.add(leftEdge);
+            }
+            
+
+            // fill up the centroid to the right
+            currentDeficitRight = weightGoal - rightNeighbor.count();
+            assert currentDeficit >= 0;
+            //Centroid rightCentroid = aboveValue(leftEdge, digest.centroids());
+            //int deficit = weightGoal - rightCentroid.count();
+            double rightCentroidVal = rightNeighbor.mean();
+            for (int pp = 0; pp < currentDeficitRight; pp++) {
+                digest.add(rightCentroidVal);
+                data.add(rightCentroidVal);
             }
 
             System.out.println(String
@@ -1032,7 +1036,7 @@ public class ZoomInPlotRelErrorTest extends AbstractTest {
             System.out.println("finished iteration: " + its);
             System.out.println("belowZeroC mean: " + belowZeroC.mean());
             System.out.println("aboveZeroC mean: " + aboveZeroC.mean());
-            System.out.println("bad point: " + bad_point);
+            //System.out.println("bad point: " + bad_point);
             System.out.println("td " + digest.cdf(bad_point));
             System.out
                 .println("truth " + countBelow(bad_point, data) / (double) data.size());
