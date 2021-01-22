@@ -56,6 +56,7 @@ public class IIDgenerator  {
     final Boolean NegativeNumbers; // if false, generate positive numbers only
     final Boolean WriteCentroidData; 
     final double lambda; // for exponential distribution
+    final String DigestImpl; // "Merging" or "AVLTree"
     final int Compression; // delta for t-digest
     final ScaleFunction scale; // ScaleFunction for t-digest
     final String InputStreamFileName;
@@ -79,6 +80,7 @@ public class IIDgenerator  {
         
         // load properties
         Distribution = getProperty("Distribution");
+        DigestImpl = getProperty("DigestImpl");
         LgN = Integer.parseInt(getProperty("LgN")); // base 2
         N = 1 << LgN;
         NumClusters = Integer.parseInt(getProperty("NumClusters"));
@@ -117,7 +119,12 @@ public class IIDgenerator  {
         System.out.println("file with generated input: " + inputFilePath);
         System.out.flush();
       
-        TDigest digest = new AVLTreeDigest(Compression);
+        TDigest digest;
+        if (DigestImpl.equals("Merging"))
+            digest = new MergingDigest(Compression);
+        else if (DigestImpl.equals("AVLTree"))
+            digest = new AVLTreeDigest(Compression);
+        else throw new Exception("unknown digest implementation: '" + DigestImpl + "'");
         digest.setScaleFunction(scale);
         if (WriteCentroidData) 
             digest.recordAllData(); // tracks centroids
@@ -131,11 +138,11 @@ public class IIDgenerator  {
 
         if (WriteCentroidData)
             writeCentroidData(digest, DigestStatsDir,
-                  DigestStatsDir + DigestStatsFileName + fileNamePart
+                  DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl
                     + "_compr=" + String.valueOf(Compression) + digest.scale.toString() + FileSuffix);
 
         writeResults(Compression, n, NumberOfPoints, prop, digest, sortedData, DigestStatsDir,
-            DigestStatsDir + DigestStatsFileName + fileNamePart + "-stats-PP=" + String.valueOf(NumberOfPoints)
+            DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl + "-stats-PP=" + String.valueOf(NumberOfPoints)
                 + "_compr=" + String.valueOf(Compression) + "_" + digest.scale.toString() + FileSuffix);
         // TODO write all properties into results
     }
