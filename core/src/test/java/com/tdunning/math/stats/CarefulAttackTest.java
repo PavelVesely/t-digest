@@ -345,7 +345,7 @@ public class CarefulAttackTest extends AbstractTest {
             
             if (!(centerOfAttack < nextStreamValue)) {
                 System.out.println(String
-                  .format("centerOfAttack < nextStreamValue: nextStreamValue:\t%s\ncenterOfAttack:\t%s\n", nextStreamValue, centerOfAttack));
+                  .format("centerOfAttack >= nextStreamValue:\nnextStreamValue:\t%s\ncenterOfAttack:\t%s\n", nextStreamValue, centerOfAttack));
                 break;
             }
 
@@ -449,7 +449,7 @@ public class CarefulAttackTest extends AbstractTest {
             System.out.println("num centroids: " + digest.centroids().size() + "\n");
 
             //double yetAnotherPoint = centerOfAttack * 0.9 + nextStreamValue * ;
-            centroidToAttack = aboveValue(anotherPoint, digest.centroids()); //centerOfAttack
+            centroidToAttack = aboveValue(anotherPoint, digest.centroids()); //centerOfAttack //belowZeroC; //
             if (centroidToAttack.mean() < centerOfAttack) {
                 System.out.println("wtf: centroidToAttack.mean()=" + centroidToAttack.mean() + " < centerOfAttack");
             }

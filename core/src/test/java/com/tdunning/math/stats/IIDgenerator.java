@@ -55,7 +55,7 @@ public class IIDgenerator  {
     final int NumberOfPoints; // number of points where we probe the rank estimates
     final Boolean NegativeNumbers; // if false, generate positive numbers only
     final Boolean WriteCentroidData; 
-    final double lambda; // for exponential distribution
+    final double lambda; // parameter for exponential distribution
     final String DigestImpl; // "Merging" or "AVLTree"
     final int Compression; // delta for t-digest
     final ScaleFunction scale; // ScaleFunction for t-digest
@@ -101,7 +101,7 @@ public class IIDgenerator  {
         Files.createDirectories(Paths.get(InputStreamFileDir));
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");  
         LocalDateTime now = LocalDateTime.now();
-        String fileNamePart = "_" + dtf.format(now) + "_" + Distribution + (NegativeNumbers ? "_wNegativeNumbers" : "_PositiveOnly") + "_lgN=" + String.valueOf(LgN);
+        String fileNamePart = "_" + dtf.format(now) + "_" + Distribution + (NegativeNumbers ? "" : "_PositiveOnly") + "_lgN=" + String.valueOf(LgN);
         String inputFilePath =
             InputStreamFileDir + InputStreamFileName + "_" + fileNamePart + FileSuffix;
         PrintWriter w = new PrintWriter(inputFilePath);
@@ -170,6 +170,9 @@ public class IIDgenerator  {
                 break;
             case "uniform":
                 item = rand.nextDouble();
+                break;
+            case "normal":
+                item = rand.nextGaussian();
                 break;
             default:
                 throw new Exception("Distribution '" + Distribution + "' undefined");
