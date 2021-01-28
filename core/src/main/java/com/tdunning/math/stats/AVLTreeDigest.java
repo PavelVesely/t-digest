@@ -22,8 +22,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 public class AVLTreeDigest extends AbstractTDigest {
+    final Random gen = new Random();
     private final double compression;
     private AVLGroupTree summary;
 
@@ -294,7 +296,7 @@ public class AVLTreeDigest extends AbstractTDigest {
                             break;
                         }
                     }
-                    return (weightSoFar + aWeight + bWeight / 2.0) / size();
+                    return (weightSoFar + bWeight / 2.0) / size();
                 }
                 assert x < bMean || x > bMean;
 
@@ -457,7 +459,7 @@ public class AVLTreeDigest extends AbstractTDigest {
         // index is in the right hand side of the last node, interpolate to max
         // we have already handled the case were last centroid is a singleton
         assert currentWeight > 1;
-        assert index - weightSoFar < currentWeight / 2 - 1;
+        assert index - weightSoFar < currentWeight / 2.0 - 1;
         assert count - weightSoFar > 0.5;
 
         double w1 = index - weightSoFar;

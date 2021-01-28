@@ -200,6 +200,7 @@ public class MergingDigest extends AbstractTDigest {
         // scale is the ratio of extra buffer to the final size
         // we have to account for the fact that we copy all live centroids into the incoming space
         double scale = Math.max(1, bufferSize / size - 1);
+        //noinspection ConstantConditions
         if (!useTwoLevelCompression) {
             scale = 1;
         }
@@ -314,7 +315,7 @@ public class MergingDigest extends AbstractTDigest {
         if (others.size() == 0) {
             return;
         }
-        int size = lastUsedCell;
+        int size = 0;
         for (TDigest other : others) {
             other.compress();
             size += other.centroidCount();
@@ -380,7 +381,12 @@ public class MergingDigest extends AbstractTDigest {
     private void merge(double[] incomingMean, double[] incomingWeight, int incomingCount,
                        List<List<Double>> incomingData, int[] incomingOrder,
                        double unmergedWeight, boolean runBackwards, double compression) {
+        // when our incoming buffer fills up, we combine our existing centroids with the incoming data,
+        // and then reduce the centroids by merging if possible
+        assert lastUsedCell <= 0 || weight[0] == 1;
+        assert lastUsedCell <= 0 || weight[lastUsedCell - 1] == 1;
         System.arraycopy(mean, 0, incomingMean, incomingCount, lastUsedCell);
+
         System.arraycopy(weight, 0, incomingWeight, incomingCount, lastUsedCell);
         incomingCount += lastUsedCell;
 
@@ -394,15 +400,17 @@ public class MergingDigest extends AbstractTDigest {
         if (incomingOrder == null) {
             incomingOrder = new int[incomingCount];
         }
-        Sort.sort(incomingOrder, incomingMean, incomingCount);
-        // option to run backwards is to investigate bias in errors
+        Sort.stableSort(incomingOrder, incomingMean, incomingCount);
+
+        totalWeight += unmergedWeight;
+
+        // option to run backwards is to help investigate bias in errors
         if (runBackwards) {
             Sort.reverse(incomingOrder, 0, incomingCount);
         }
 
-        totalWeight += unmergedWeight;
 
-        assert (lastUsedCell + incomingCount) > 0;
+        // start by copying the least incoming value to the normal buffer
         lastUsedCell = 0;
         mean[lastUsedCell] = incomingMean[incomingOrder[0]];
         weight[lastUsedCell] = incomingWeight[incomingOrder[0]];
@@ -411,7 +419,6 @@ public class MergingDigest extends AbstractTDigest {
             assert incomingData != null;
             data.add(incomingData.get(incomingOrder[0]));
         }
-
 
         // weight will contain all zeros after this loop
 
@@ -429,6 +436,10 @@ public class MergingDigest extends AbstractTDigest {
                 addThis = proposedWeight <= totalWeight * Math.min(scale.max(q0, normalizer), scale.max(q2, normalizer));
             } else {
                 addThis = projectedW <= wLimit;
+            }
+            if (i == 1 || i == incomingCount - 1) {
+                // force last centroid to never merge
+                addThis = false;
             }
 
             if (addThis) {
@@ -482,6 +493,8 @@ public class MergingDigest extends AbstractTDigest {
                 Collections.reverse(data);
             }
         }
+        assert weight[0] == 1;
+        assert weight[lastUsedCell - 1] == 1;
 
         if (totalWeight > 0) {
             min = Math.min(min, mean[0]);
@@ -552,6 +565,9 @@ public class MergingDigest extends AbstractTDigest {
 
     @Override
     public double cdf(double x) {
+        if (Double.isNaN(x) || Double.isInfinite(x)) {
+            throw new IllegalArgumentException(String.format("Invalid value: %f", x));
+        }
         mergeNewValues();
 
         if (lastUsedCell == 0) {
@@ -726,7 +742,7 @@ public class MergingDigest extends AbstractTDigest {
 
         // if the right-most centroid has more than one sample, we still know
         // that one sample occurred at max so we can do some interpolation
-        if (weight[n-1] > 1 && totalWeight - index <= weight[n - 1] / 2) {
+        if (weight[n - 1] > 1 && totalWeight - index <= weight[n - 1] / 2) {
             return max - (totalWeight - index - 1) / (weight[n - 1] / 2 - 1) * (max - mean[n - 1]);
         }
 
@@ -839,6 +855,11 @@ public class MergingDigest extends AbstractTDigest {
     @SuppressWarnings("WeakerAccess")
     public ScaleFunction getScaleFunction() {
         return scale;
+    }
+
+    @Override
+    public void setScaleFunction(ScaleFunction scaleFunction) {
+        super.setScaleFunction(scaleFunction);
     }
 
     public enum Encoding {
