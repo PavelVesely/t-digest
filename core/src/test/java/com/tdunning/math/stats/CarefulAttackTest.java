@@ -393,7 +393,7 @@ public class CarefulAttackTest extends AbstractTest {
             
             double leftEdge = nextStreamValue * 0.1; //centerOfAttack * EPS + 
             
-            for (; v < weightGoal / 5; v++) {
+            for (; v < weightGoal / 10; v++) {
                 digest.add(anotherPoint);
                 data.add(anotherPoint);
             }            
@@ -449,7 +449,7 @@ public class CarefulAttackTest extends AbstractTest {
             System.out.println("num centroids: " + digest.centroids().size() + "\n");
 
             //double yetAnotherPoint = centerOfAttack * 0.9 + nextStreamValue * ;
-            centroidToAttack = aboveValue(anotherPoint, digest.centroids()); //centerOfAttack //belowZeroC; //
+            centroidToAttack = belowZeroC; //aboveValue(anotherPoint, digest.centroids()); //centerOfAttack //belowZeroC; //
             if (centroidToAttack.mean() < centerOfAttack) {
                 System.out.println("wtf: centroidToAttack.mean()=" + centroidToAttack.mean() + " < centerOfAttack");
             }
