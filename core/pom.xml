@@ -29,7 +29,7 @@
     <packaging>jar</packaging>
     <name>T-Digest</name>
     <description>Data structure which allows accurate estimation of quantiles and related rank statistics</description>
-    <url>https://github.com/tdunning/t-digest</url>
+    <url>https://github.com/PavelVesely/t-digest</url>
 
     <licenses>
         <license>
@@ -40,10 +40,10 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:https://github.com/tdunning/t-digest.git</connection>
-        <developerConnection>scm:git:https://github.com/tdunning/t-digest.git</developerConnection>
+        <connection>scm:git:https://github.com/PavelVesely/t-digest.git</connection>
+        <developerConnection>scm:git:https://github.com/PavelVesely/t-digest.git</developerConnection>
         <tag>HEAD</tag>
-        <url>https://github.com/tdunning/t-digest</url>
+        <url>https://github.com/PavelVesely/t-digest</url>
     </scm>
 
     <developers>
@@ -92,6 +92,16 @@
             <artifactId>guava</artifactId>
             <version>29.0-jre</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.datasketches</groupId>
+          <artifactId>datasketches-memory</artifactId>
+          <version>1.3.0</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.datasketches</groupId>
+          <artifactId>datasketches-java</artifactId>
+          <version>1.3.0-incubating</version>
         </dependency>
     </dependencies>
 
