@@ -17,23 +17,12 @@
 
 package com.tdunning.math.stats;
 
-import com.google.common.collect.Lists;
-
 import org.apache.mahout.common.RandomUtils;
-import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
-import org.apache.mahout.math.jet.random.Gamma;
-import org.apache.mahout.math.jet.random.Normal;
-import org.apache.mahout.math.jet.random.Uniform;
 import org.junit.*;
 
-import java.io.*;
+import java.io.File;
 import java.lang.Math;
-import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Ignore;
 
@@ -42,16 +31,20 @@ import org.junit.Ignore;
  *
  */
 //@Ignore
-public class CarefulAttackTest extends AbstractTest {
-    
+public class CarefulAttackTest extends AdversarialAttackTest {
+
     @BeforeClass
     public static void freezeSeed() {
         RandomUtils.useTestSeed();
     }
 
-
     @Ignore
     public void carefulNested() throws Exception {
+        carefulNestedGen(ScaleFunction.K_3);
+    }
+
+    @Ignore
+    public void carefulNestedGen(ScaleFunction scaleFunction) throws Exception {
 
         double EPSILON = Double.MIN_VALUE;
 
@@ -60,7 +53,7 @@ public class CarefulAttackTest extends AbstractTest {
 
         List<Double> data = new ArrayList<>();
         MergingDigest digest = new MergingDigest(delta);
-        digest.setScaleFunction(ScaleFunction.K_0);
+        digest.setScaleFunction(scaleFunction);
         digest.setUseAlternatingSort(false);
 
         int initializingHalfBatchSize = (int) Math.floor(delta * 10);
@@ -233,6 +226,9 @@ public class CarefulAttackTest extends AbstractTest {
             rightNeighbor = aboveValue(centroidToAttack.mean(), digest.centroids());
         }
 
+        writeResults((int) delta, data.size(), digest, data, DigestStatsDir, "careful_" + its,
+            true);
+
         double bad_point = (previous_c + previous_y) / 2d;
         Collections.sort(data);
 
@@ -240,51 +236,87 @@ public class CarefulAttackTest extends AbstractTest {
         System.out.println("truth " + countBelow(bad_point, data) / (double) data.size());
         System.out.println("iterations" + its);
     }
-    
+
+    //@Test
+    public void findDiscrepancy() throws Exception {
+
+        List<Double> errors1 = carefulNestedAroundZeroK_0();
+        List<Double> errors2 = carefulNestedAroundZeroK_0();
+
+        for (int i = 0; i < errors1.size(); i++) {
+            if (Math.abs(errors1.get(i) - errors2.get(i)) > Double.MIN_VALUE) {
+                System.out.println(i + " " + errors1.get(i) + " " + errors2.get(i));
+            }
+        }
+
+    }
+
+    private int weightGoal(ScaleFunction scaleFunction, double delta, double weightToLeft,
+        double weightToRight, long size) {
+        if (scaleFunction == ScaleFunction.K_0) {
+            return (int) Math.ceil((weightToLeft + weightToRight) / ((delta / 2d) - 3d));
+        } else if (scaleFunction == ScaleFunction.K_3) {
+            double norm = 4 * Math.log(size / delta) + 21;
+            //double norm = 4 * Math.log(1d / delta);
+            //double norm = 1d;
+            return (int) ((Math.exp(norm / delta) - 1d) * Math
+                .min(weightToRight, weightToLeft));
+        } else {
+            return 0;
+        }
+    }
+
 
     @Test
-    public void carefulNestedAroundZero() throws Exception {
+    public List<Double> carefulNestedAroundZeroK_3() throws Exception {
+        return carefulNestedAroundZero(ScaleFunction.K_3, 500, 100, true, true);
+    }
+
+    //@Test
+    public List<Double> carefulNestedAroundZeroK_0() throws Exception {
+        return carefulNestedAroundZero(ScaleFunction.K_0, 500, 1000, true, false);
+        // AVL - runs out of heap at 1415 iteration!
+    }
+
+
+    //@Test
+    public List<Double> carefulNestedAroundZero(ScaleFunction scaleFunction, double delta,
+        int iterations, boolean writeResults, boolean writeCentroidData) throws Exception {
+
+        List<Double> errors = new ArrayList<>();
 
         double EPSILON = Double.MIN_VALUE;
 
-        double delta = 500;
-        //double delta = 1000;
-
         List<Double> data = new ArrayList<>();
-        MergingDigest digest = new MergingDigest(delta);
-        digest.setScaleFunction(ScaleFunction.K_0);
-        digest.setUseAlternatingSort(false);
+        //MergingDigest digest = new MergingDigest(delta);
+        //digest.setUseAlternatingSort(false);
+        AVLTreeDigest digest = new AVLTreeDigest(delta);
+        digest.setScaleFunction(scaleFunction);
 
         int initializingHalfBatchSize = (int) Math.floor(delta * 10);
 
-        // delta=500, denom=100000 seems to work okay..
-
-        double denom = 10000000000d;
-        //denom *= 100;
+        double denom = 100000000d;
         double infty = (Double.MAX_VALUE) / denom; // so we can safely average
 
         double increment = infty / initializingHalfBatchSize;
-        System.out.println("infty:\t" + infty + "\ninitializingHalfBatchSize: \t" + initializingHalfBatchSize);
-        
-        // add a glob of zeroes, aim for error there.
-//        for (int j = 0; j < 5 * initializingHalfBatchSize; j++) {
-//            data.add(0d);
-//            digest.add(0d);
-//        }
-//
-//        for (int i = 0; i < 2 * initializingHalfBatchSize; i++) {
-//            double point = -infty;
-//            for (int j = 0; j < i; j++) {
-//                point += increment;
-//            }
-//            data.add(point);
-//            digest.add(point);
-//        }
+        System.out.println(
+            "infty:\t" + infty + "\ninitializingHalfBatchSize: \t" + initializingHalfBatchSize);
+
+        // try to place the attack in the right tail
+        if (!(scaleFunction == ScaleFunction.K_0)) {
+            int init = 0;
+            while (init < 250 * initializingHalfBatchSize) {
+                data.add(-infty * (2d - ((double) init / 250 / initializingHalfBatchSize)));
+                data.add(-infty * (2d - ((double) init / 250 / initializingHalfBatchSize)));
+                init++;
+            }
+        }
+
         for (int i = 0; i < 2 * initializingHalfBatchSize; i++) {
-          data.add(-infty);
-          digest.add(-infty);
-          data.add(infty);
-          digest.add(infty);
+            data.add(-infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
+            digest.add(-infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
+            data.add(infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
+            digest.add(infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
         }
         digest.compress();
 
@@ -296,7 +328,7 @@ public class CarefulAttackTest extends AbstractTest {
 
         double weightToRight;
         double weightToLeft;
-        int its = 0;
+        int iteration = 0;
         int weightGoal;
         int currentDeficit;
         int weightOfAttacked;
@@ -305,6 +337,9 @@ public class CarefulAttackTest extends AbstractTest {
         int weightOfRightNeighbor;
 
         Collections.sort(data);
+
+        //  1> maximal error so far: 0.3265282585631959 on 1244
+        //detectDupes(data, "initial batch");
         double nextStreamValue = nextValue(centerOfAttack, data);
 
         double previous_c;
@@ -313,8 +348,8 @@ public class CarefulAttackTest extends AbstractTest {
         double maximalError = 0;
         int indexError = 0;
 
-        while (true) {
-            its++;
+        while (iteration < iterations) {
+            iteration++;
 
             previous_c = centerOfAttack;
             previous_y = nextStreamValue;
@@ -335,87 +370,116 @@ public class CarefulAttackTest extends AbstractTest {
             weightToLeft = digest.size() - weightOfAttacked - weightOfRightNeighbor - weightToRight;
 
             Collections.sort(data);
-            nextStreamValue = nextValue(0, data); //centerOfAttack
-            
-            if (nextStreamValue < 100*Double.MIN_VALUE) {
+            nextStreamValue = nextValue(0, data);   //centerOfAttack
+            //nextStreamValue = nextValue(centerOfAttack, data); //<-- doesn't work very well
+
+            if (nextStreamValue < 100 * Double.MIN_VALUE) {
                 System.out.println(String
-                  .format("too small nextStreamValue:\t%s", nextStreamValue));
-                break;
-            }
-            
-            if (!(centerOfAttack < nextStreamValue)) {
-                System.out.println(String
-                  .format("centerOfAttack >= nextStreamValue:\nnextStreamValue:\t%s\ncenterOfAttack:\t%s\n", nextStreamValue, centerOfAttack));
+                    .format("too small nextStreamValue:\t%s", nextStreamValue));
                 break;
             }
 
-            if (its > 1) {
+            if (!(centerOfAttack < nextStreamValue)) {
+                System.out.println(String
+                    .format(
+                        "centerOfAttack < nextStreamValue: nextStreamValue:\t%s\ncenterOfAttack:\t%s\n",
+                        nextStreamValue, centerOfAttack));
+                break;
+            }
+
+            if (iteration > 1) {
                 if ((previous_c > centerOfAttack)) {
                     System.out.println(String
-                        .format("previous_c:\t%s\ncenterOfAttack:\t%s\n", previous_c, centerOfAttack));
-                    throw new Exception("previous_c > centerOfAttac: wrongly ordered, you probably ran out of precision");
+                        .format("previous_c:\t%s\ncenterOfAttack:\t%s\n", previous_c,
+                            centerOfAttack));
+//                    throw new Exception(
+//                        "previous_c > centerOfAttack: wrongly ordered, you probably ran out of precision");
                 }
                 if (nextStreamValue > previous_y) {
                     System.out.println(String
-                        .format("nextStreamValue:\t%s\nprevious_y:\t%s\n", nextStreamValue, previous_y));
-                    throw new Exception("nextStreamValue > previous_y: wrongly ordered, you probably ran out of precision");
+                        .format("nextStreamValue:\t%s\nprevious_y:\t%s\n", nextStreamValue,
+                            previous_y));
+//                    throw new Exception(
+//                        "nextStreamValue > previous_y: wrongly ordered, you probably ran out of precision");
                 }
             }
 
             // weight of the centroid we will fabricate
-            // this is the formula for K_0
-            // we also maintain centroid to the right of the attack
             System.out.println("centroids count: " + digest.centroids().size());
-            weightGoal = (int) Math.ceil((weightToLeft + weightToRight) / ((delta / 2d) - 3d));
+            weightGoal = weightGoal(scaleFunction, delta, weightToLeft, weightToRight,
+                digest.size());
+            //(int) Math.ceil((weightToLeft + weightToRight) / ((delta / 2d) - 3d));
             System.out.println("weightGoal: " + weightGoal);
 
+            // this information is relevant mainly for K_0, where the behavior is uniform
             System.out.println(
                 "centroids exceeding goal at start: " + centroidsExceedingCount(digest.centroids(),
                     weightGoal));
             currentDeficit = weightGoal - weightOfAttacked;
-            assert currentDeficit >= 0;
+            // if (its > 2) {assert currentDeficit >= 0;}
 
             double EPS = .001;
-            double EPS_2 = .01;
+            double EPS_2 = .001; // or .01
 
             // fill up the old one
-            double point = centerOfAttack; // * (1d - EPS) + nextStreamValue * EPS;
+            //double point = centerOfAttack; // * (1d - EPS) + nextStreamValue * EPS;
             for (int v = 0; v < currentDeficit; v++) {
-                //double point = centerOfAttack + (nextStreamValue - centerOfAttack) / 10000; // * onePlus; //no Plus Epsilon
+                //   / 1000000); // * onePlus; //no Plus Epsilon
+                double point = centerOfAttack;
                 digest.add(point, 1);
                 data.add(point);
             }
 
-
             // make the new one
             int v = 0;
-            double anotherPoint = centerOfAttack * (1d - EPS_2) + nextStreamValue * EPS_2;
-            
-            double leftEdge = nextStreamValue * 0.1; //centerOfAttack * EPS + 
-            
-            for (; v < weightGoal / 10; v++) {
-                digest.add(anotherPoint);
-                data.add(anotherPoint);
-            }            
-            for (; v < weightGoal; v++) {
-                digest.add(leftEdge, 1);
-                data.add(leftEdge);
-            }
-            
 
-            // fill up the centroid to the right
+            //            double anotherPoint = centerOfAttack * (1d - EPS_2) + nextStreamValue * EPS_2;
+//
+//            double leftEdge = nextStreamValue * 0.1; //centerOfAttack * EPS +
+//
+//            for (; v < weightGoal / 10; v++) {
+//                digest.add(anotherPoint);
+//                data.add(anotherPoint);
+//            }
+//=======
+            double anotherPoint = (centerOfAttack + EPS_2 * (nextStreamValue - centerOfAttack));
+
+            //double anotherPoint = centerOfAttack * 0.1;
+
+            double leftEdge = nextStreamValue * 0.4; //+ EPS_2 * (centerOfAttack - nextStreamValue);
+//            double leftEdge = nextStreamValue + EPS_2 * (centerOfAttack - nextStreamValue);
+
+            //centerOfAttack * (1d - EPS_2) + nextStreamValue * EPS_2; nextStreamValue * 0.1; //centerOfAttack * EPS +
+
+            for (; v < weightGoal / 5; v++) {
+                double toAdd = anotherPoint; //+ (leftEdge - anotherPoint) * v  / (double) weightGoal / 10000;
+                digest.add(toAdd);
+                data.add(toAdd);
+            }
+
+            for (; v < weightGoal; v++) {
+                double toAdd = leftEdge; //+ (anotherPoint - leftEdge) * v / (double) weightGoal / 10000;
+                digest.add(toAdd, 1);
+                data.add(toAdd);
+            }
+
+            // we also maintain centroid to the right of the attack
             currentDeficitRight = weightGoal - rightNeighbor.count();
-            assert currentDeficit >= 0;
+            //assert currentDeficit >= 0;
+
             //Centroid rightCentroid = aboveValue(leftEdge, digest.centroids());
             //int deficit = weightGoal - rightCentroid.count();
             double rightCentroidVal = rightNeighbor.mean();
             for (int pp = 0; pp < currentDeficitRight; pp++) {
+                rightCentroidVal = rightCentroidVal + .0000000001;
                 digest.add(rightCentroidVal);
                 data.add(rightCentroidVal);
             }
 
             System.out.println(String
-                .format("centerOfAttack:\t%s\npoint:\t\t%s\nanotherPoint:\t%s\nleftEdge:  \t%s\nnextStreamValue:\t%s", centerOfAttack, point, anotherPoint, leftEdge,
+                .format(
+                    "centerOfAttack:\t%s\npoint:\t\t%s\nanotherPoint:\t%s\nleftEdge:  \t%s\nnextStreamValue:\t%s",
+                    centerOfAttack, centerOfAttack, anotherPoint, leftEdge,
                     nextStreamValue));
 
             digest.compress();
@@ -424,34 +488,56 @@ public class CarefulAttackTest extends AbstractTest {
                 "centroids exceeding goal at end: " + centroidsExceedingCount(digest.centroids(),
                     weightGoal - 1));
 
-            double bad_point = 0; //centerOfAttack * .00000000001 + nextStreamValue * (1 - .00000000001);
+            double bad_point = 0;
+            //double bad_point = leftEdge;
             Centroid belowZeroC = belowValue(0, digest.centroids());
             Centroid aboveZeroC = aboveValue(0, digest.centroids());
             //double bad_point = belowZeroC.mean();
             Collections.sort(data);
 
-            System.out.println("finished iteration: " + its);
+            // detectDupes(data, "iteration " + its);
+            // detectDupes(digest.centroids());
+
+            System.out.println("finished iteration: " + iteration);
             System.out.println("belowZeroC mean: " + belowZeroC.mean());
             System.out.println("aboveZeroC mean: " + aboveZeroC.mean());
             //System.out.println("bad point: " + bad_point);
-            System.out.println("td " + digest.cdf(bad_point));
-            System.out
-                .println("truth " + countBelow(bad_point, data) / (double) data.size());
 
-            double error = Math
-                .abs(digest.cdf(bad_point) - countBelow(bad_point, data) / (double) data.size());
+            if (iteration > 1) {
+                System.out.println("td " + digest.cdf(bad_point));
+                System.out
+                    .println("truth " + countBelow(bad_point, data) / (double) data.size());
+                double error = Math
+                    .abs(
+                        digest.cdf(bad_point) - countBelow(bad_point, data) / (double) data.size());
 
-            if (error > maximalError) {
-                maximalError = error;
-                indexError = its;
+                errors.add(error);
+
+                if (error > maximalError) {
+                    maximalError = error;
+                    indexError = iteration;
+                }
             }
             System.out.println("maximal error so far: " + maximalError + " on " + indexError);
             System.out.println("num centroids: " + digest.centroids().size() + "\n");
 
             //double yetAnotherPoint = centerOfAttack * 0.9 + nextStreamValue * ;
             centroidToAttack = belowZeroC; //aboveValue(anotherPoint, digest.centroids()); //centerOfAttack //belowZeroC; //
+            // ^ works better for AVL?!
+
+            /////centroidToAttack = belowValue(0, digest.centroids()); //
+            //
+            // centerOfAttack
+
+            //centroidToAttack = belowValue(leftEdge, digest.centroids()); //centerOfAttack
+            //            centroidToAttack = aboveValue(centerOfAttack, digest.centroids()); //centerOfAttack
+
+            // the good one for Merging?
+            //centroidToAttack = aboveValue(anotherPoint, digest.centroids()); //centerOfAttack
+
             if (centroidToAttack.mean() < centerOfAttack) {
-                System.out.println("wtf: centroidToAttack.mean()=" + centroidToAttack.mean() + " < centerOfAttack");
+                System.out.println("wtf: centroidToAttack.mean()=" + centroidToAttack.mean()
+                    + " < centerOfAttack");
             }
             //if (centroidToAttack.mean() > 0) {
             //  System.out.println("above zero: centroidToAttack.mean()=" + centroidToAttack.mean());
@@ -460,12 +546,54 @@ public class CarefulAttackTest extends AbstractTest {
             rightNeighbor = aboveValue(centroidToAttack.mean(), digest.centroids());
         }
 
-        double bad_point = (previous_c + previous_y) / 2d;
+        double bad_point = 0; // (previous_c + previous_y) / 2d;
         Collections.sort(data);
 
-        System.out.println("td " + digest.cdf(bad_point));
+        //System.out.println("td " + digest.cdf(bad_point));
         System.out.println("truth " + countBelow(bad_point, data) / (double) data.size());
-        System.out.println("iterations" + its);
+        System.out.println("iterations" + iteration);
+
+        if (writeResults) {
+            writeResults((int) delta, data.size(), digest, data, DigestStatsDir,
+                DigestStatsDir + String.format(
+                    "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d",
+                    iteration,
+                    data.size(), digest.scale.toString(), (int) delta, digest.centroidCount(),
+                    digest.byteSize()) + FileSuffix, false);
+        }
+        if (writeCentroidData) {
+            writeCentroidData(digest,
+                DigestStatsDir + String.format(
+                    "centroids_careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d",
+                    iteration,
+                    data.size(), digest.scale.toString(), (int) delta, digest.centroidCount(),
+                    digest.byteSize()) + FileSuffix);
+        }
+        return errors;
+    }
+
+    private void detectDupes(List<Double> inputs, String context) {
+        for (int index = 0; index < inputs.size() - 1; index++) {
+            if (inputs.get(index).equals(inputs.get(index + 1))) {
+                System.out.println("input dupe detected: " + context);
+            }
+        }
+    }
+
+    // assume sorted...
+    private void detectDupes(Collection<Centroid> centroids) {
+        Iterator<Centroid> centroidIterator = centroids.iterator();
+        Centroid centroid = centroidIterator.next();
+        Centroid previous = null;
+        while (centroidIterator.hasNext()) {
+            if (previous != null) {
+                if (centroid.mean() == previous.mean()) {
+                    System.out.println("centroid dupe detected");
+                }
+            }
+            previous = centroid;
+            centroid = centroidIterator.next();
+        }
     }
 
     private int centroidsExceedingCount(Collection<Centroid> centroids, int countThreshold) {
@@ -478,36 +606,67 @@ public class CarefulAttackTest extends AbstractTest {
         return j;
     }
 
-    // assume centroids in ascending order
+    /*
+    Find the smallest centroid above the given threshold
+     */
     private Centroid aboveValue(double c, Collection<Centroid> centroids) throws Exception {
         Iterator<Centroid> centroidIterator = centroids.iterator();
         Centroid centroid = centroidIterator.next();
+        Centroid smallestCentroid = null;
+        double smallestMean = Double.POSITIVE_INFINITY;
         while (centroidIterator.hasNext()) {
-            if (c < (centroid.mean())) {
-                return centroid;
-            } else {
-                centroid = centroidIterator.next();
+            if (c < centroid.mean() && centroid.mean() < smallestMean) {
+                smallestCentroid = centroid;
+                smallestMean = centroid.mean();
             }
+            centroid = centroidIterator.next();
         }
-        throw new Exception("couldn't find a centroid above threshold");
+        if (smallestCentroid != null) {
+            return smallestCentroid;
+        } else {
+            throw new Exception("couldn't find a centroid above threshold");
+        }
     }
 
-    // assume centroids in ascending order
+    /*
+    Find the largest centroid below the given threshold
+     */
     private Centroid belowValue(double c, Collection<Centroid> centroids) throws Exception {
         Iterator<Centroid> centroidIterator = centroids.iterator();
         Centroid centroid = centroidIterator.next();
-        Centroid previous = null;
+        Centroid largestCentroid = null;
+        double largestMean = Double.NEGATIVE_INFINITY;
         while (centroidIterator.hasNext()) {
-            if (centroid.mean() >= c) {
-                return previous;
-                // centroid = centroidIterator.next();
-            } else {
-                previous = centroid;
-                centroid = centroidIterator.next();
+            if (c > centroid.mean() && centroid.mean() > largestMean) {
+                largestCentroid = centroid;
+                largestMean = centroid.mean();
             }
+            centroid = centroidIterator.next();
         }
-        throw new Exception("couldn't find a centroid there");
+        if (largestCentroid != null) {
+            return largestCentroid;
+        } else {
+            throw new Exception("couldn't find a centroid below threshold");
+        }
     }
+
+//
+//    // assume centroids in ascending order
+//    private Centroid belowValue(double c, Collection<Centroid> centroids) throws Exception {
+//        Iterator<Centroid> centroidIterator = centroids.iterator();
+//        Centroid centroid = centroidIterator.next();
+//        Centroid previous = null;
+//        while (centroidIterator.hasNext()) {
+//            if (centroid.mean() >= c) {
+//                return previous;
+//                // centroid = centroidIterator.next();
+//            } else {
+//                previous = centroid;
+//                centroid = centroidIterator.next();
+//            }
+//        }
+//        throw new Exception("couldn't find a centroid there");
+//    }
 
     // assume data is sorted
     private double nextValue(double c, List<Double> sortedData) {

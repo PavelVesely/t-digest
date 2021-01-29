@@ -26,8 +26,8 @@ import org.apache.mahout.math.jet.random.Normal;
 import org.apache.mahout.math.jet.random.Uniform;
 import org.junit.*;
 
-import java.time.format.DateTimeFormatter;  
-import java.time.LocalDateTime;    
+import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 
 import java.io.*;
 import java.lang.Math;
@@ -46,8 +46,8 @@ import org.junit.Ignore;
  *
  */
 
-public class IIDgenerator  {
-    
+public class IIDgenerator {
+
     // confidence intervals of normal distrib. 
     public static final double M4SD = 0.0000316712418331; //minus 4 StdDev
     public static final double M3SD = 0.0013498980316301; //minus 3 StdDev
@@ -67,7 +67,7 @@ public class IIDgenerator  {
     final int NumClusters; // for clustered distribution
     final int NumberOfPoints; // number of points where we probe the rank estimates
     final Boolean NegativeNumbers; // if false, generate positive numbers only
-    final Boolean WriteCentroidData; 
+    final Boolean WriteCentroidData;
     final double lambda; // parameter for exponential distribution
     final String DigestImpl; // "Merging" or "AVLTree"
     final int Compression; // delta for t-digest
@@ -77,22 +77,22 @@ public class IIDgenerator  {
     final String DigestStatsFileName;
     final String DigestStatsDir;
     final String FileSuffix;
-    
+
     // vars for experiments
     Random rand;
     Properties prop;
     int maxExpBase2;
     int n;
 
-    
+
     public IIDgenerator(final String configFile) throws Exception {
         Instant startTime = Instant.now();
-        
+
         System.out.println("processing config file: " + configFile);
         prop = new Properties();
         FileInputStream instream = new FileInputStream(configFile);
         prop.load(instream);
-        
+
         // load properties
         Distribution = getProperty("Distribution");
         DigestImpl = getProperty("DigestImpl");
@@ -101,9 +101,11 @@ public class IIDgenerator  {
         LgT = Integer.parseInt(getProperty("LgT")); // base 2
         T = 1 << LgT;
         NumClusters = Integer.parseInt(getProperty("NumClusters"));
-        NumberOfPoints = Integer.parseInt(getProperty("NumberOfPoints")); // number of points where we probe the rank estimates
-        NegativeNumbers = Boolean.parseBoolean(getProperty("NegativeNumbers")); // if false, generate positive numbers only
-        WriteCentroidData = Boolean.parseBoolean(getProperty("WriteCentroidData")); 
+        NumberOfPoints = Integer.parseInt(
+            getProperty("NumberOfPoints")); // number of points where we probe the rank estimates
+        NegativeNumbers = Boolean.parseBoolean(
+            getProperty("NegativeNumbers")); // if false, generate positive numbers only
+        WriteCentroidData = Boolean.parseBoolean(getProperty("WriteCentroidData"));
         lambda = Double.parseDouble(getProperty("Lambda")); // for exponential distribution
         Compression = Integer.parseInt(getProperty("Compression")); // delta for t-digest
         scale = ScaleFunction.valueOf(getProperty("ScaleFunction")); // ScaleFunction for t-digest
@@ -115,24 +117,26 @@ public class IIDgenerator  {
 
         List<Double> data = new ArrayList<Double>();
         //Files.createDirectories(Paths.get(InputStreamFileDir));
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");  
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
         LocalDateTime now = LocalDateTime.now();
-        String fileNamePart = "_" + dtf.format(now) + "_" + Distribution + (NegativeNumbers ? "" : "_PositiveOnly") + "_lgN=" + String.valueOf(LgN);
+        String fileNamePart =
+            "_" + dtf.format(now) + "_" + Distribution + (NegativeNumbers ? "" : "_PositiveOnly")
+                + "_lgN=" + String.valueOf(LgN);
 //        String inputFilePath =
 //            InputStreamFileDir + InputStreamFileName + "_" + fileNamePart + FileSuffix;
 //        PrintWriter w = new PrintWriter(inputFilePath);
         rand = new Random();
-        
-        
+
         // intialize t-digests to collect errors of t-digest:
-        TDigest[] errorDigests = new TDigest[NumberOfPoints+1]; // TODO use t-digest or something else?
+        TDigest[] errorDigests = new TDigest[NumberOfPoints
+            + 1]; // TODO use t-digest or something else?
         for (int t = 0; t <= NumberOfPoints; t++) {
             errorDigests[t] = new MergingDigest(200);
             errorDigests[t].setScaleFunction(ScaleFunction.K_2); // we do not need extreme quantiles
         }
-        
+
         maxExpBase2 = (int) (Math.log(Double.MAX_VALUE / N) / Math.log(2));
-        
+
 //        for (n = 0; n < N; n++) {
 //            double item = generateItem();
 //            data.add(item);
@@ -146,15 +150,18 @@ public class IIDgenerator  {
         TDigest digest = null;
         List<Double> sortedData = null;
         for (int trial = 0; trial < T; trial++) { // trials
-            if (DigestImpl.equals("Merging"))
+            if (DigestImpl.equals("Merging")) {
                 digest = new MergingDigest(Compression);
-            else if (DigestImpl.equals("AVLTree"))
+            } else if (DigestImpl.equals("AVLTree")) {
                 digest = new AVLTreeDigest(Compression);
-            else throw new Exception("unknown digest implementation: '" + DigestImpl + "'");
+            } else {
+                throw new Exception("unknown digest implementation: '" + DigestImpl + "'");
+            }
             assert digest.size() == 0;
             digest.setScaleFunction(scale);
-            if (WriteCentroidData && trial == T-1) 
+            if (WriteCentroidData && trial == T - 1) {
                 digest.recordAllData(); // tracks centroids during the last trial
+            }
             sortedData = new ArrayList<Double>();
             for (n = 0; n < N; n++) {
                 double item = generateItem();
@@ -168,7 +175,9 @@ public class IIDgenerator  {
             for (int t = 0; t <= NumberOfPoints; t++) {
                 //THE FOLLOWING IS EXTREMELY SLOW: Dist.cdf(item, sortedData);
                 int rTrue = (int) Math.ceil(t / (float) NumberOfPoints * N) + 1;
-                if (rTrue > N) rTrue--;
+                if (rTrue > N) {
+                    rTrue--;
+                }
                 double item = sortedData.get(rTrue - 1);
                 // handling duplicate values -- rank is then rather an interval
                 int rTrueMin = rTrue;
@@ -194,28 +203,35 @@ public class IIDgenerator  {
             }
         }
         //Collections.sort(data);
-        
+
         System.out
             .println("processing by t-digest done for compression =" + String.valueOf(Compression));
         System.out.flush();
 
         if (WriteCentroidData) // from the last trial
+        {
             writeCentroidData(digest, DigestStatsDir,
-                  DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl
-                    + "_compr=" + String.valueOf(Compression) + digest.scale.toString() + FileSuffix);
+                DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl
+                    + "_compr=" + String.valueOf(Compression) + digest.scale.toString()
+                    + FileSuffix);
+        }
 
-        writeResults(Compression, n, NumberOfPoints, prop, digest, errorDigests, sortedData, startTime, DigestStatsDir,
-            DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl + "-stats-PP=" + String.valueOf(NumberOfPoints)
-                + "_compr=" + String.valueOf(Compression) + "_" + digest.scale.toString() + FileSuffix);
+        writeResults(Compression, n, NumberOfPoints, prop, digest, errorDigests, sortedData,
+            startTime, DigestStatsDir,
+            DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl + "-stats-PP="
+                + String.valueOf(NumberOfPoints)
+                + "_compr=" + String.valueOf(Compression) + "_" + digest.scale.toString()
+                + FileSuffix);
         // TODO write all properties into results
     }
-    
+
     // the following does an additional trim and removes possible comment
     String getProperty(String propName) {
         String value = prop.getProperty(propName);
         int inx = value.indexOf('#');
-        if (inx >= 0)
-             value = value.substring(0, inx-1);
+        if (inx >= 0) {
+            value = value.substring(0, inx - 1);
+        }
         return value.trim();
     }
 
@@ -229,7 +245,9 @@ public class IIDgenerator  {
                 item = Math.log(1 - rand.nextDouble()) / (-lambda);
                 break;
             case "clustered":
-                item = (0.9999 + rand.nextDouble() / 100000000) * (rand.nextInt(NumClusters/2) + 1) * (Double.MAX_VALUE / (N*NumClusters));
+                item =
+                    (0.9999 + rand.nextDouble() / 100000000) * (rand.nextInt(NumClusters / 2) + 1)
+                        * (Double.MAX_VALUE / (N * NumClusters));
                 break;
             case "uniform":
                 item = rand.nextDouble();
@@ -245,10 +263,10 @@ public class IIDgenerator  {
         }
         return item;
     }
-    
 
-            
-    public static void writeResults(int compr, int size, int numPoints, Properties prop, TDigest digest, TDigest[] errorDigests,
+
+    public static void writeResults(int compr, int size, int numPoints, Properties prop,
+        TDigest digest, TDigest[] errorDigests,
         List<Double> sortedData, Instant startTime, String digestStatsDir, String outName) throws
         IOException {
         Files.createDirectories(Paths.get(digestStatsDir));
@@ -260,18 +278,22 @@ public class IIDgenerator  {
         //System.out.printf("computing rel. errors\n");
         //System.out.flush();
 
-        fwout.write("true quantile;-2 std. dev. of error; median error;+2 std. dev. of error;item\n");
+        fwout.write(
+            "true quantile;-2 std. dev. of error; median error;+2 std. dev. of error;item\n");
         for (int t = 0; t <= numPoints; t++) {
             int rTrue = (int) Math.ceil(t / (float) numPoints * size) + 1;
-            if (rTrue > size) rTrue--;
+            if (rTrue > size) {
+                rTrue--;
+            }
             double item = sortedData.get(rTrue - 1); // in the last trial
             double addErrM2SD = errorDigests[t].quantile(M2SD);
             double addErrMed = errorDigests[t].quantile(0.5);
             double addErrP2SD = errorDigests[t].quantile(P2SD);
-            
+
             //relErr = Math.abs(rTrueMax - rEst) / (size - rTrue + 1);
             fwout.write(String
-                .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrM2SD, addErrMed, addErrP2SD, String.valueOf(item)));
+                .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrM2SD, addErrMed,
+                    addErrP2SD, String.valueOf(item)));
         }
         fwout.write("\n");
         fwout.write(String.format("n=%d\n", size));
@@ -280,17 +302,17 @@ public class IIDgenerator  {
         fwout.write(String.format("# of centroids = %d\n", digest.centroids().size()));
         fwout.write(String.format("size in bytes = %d\n", digest.byteSize()));
         Duration diff = Duration.between(startTime, Instant.now());
-        String hms = String.format("%d:%02d:%02d", 
-                                    diff.toHours(), 
-                                    diff.toMinutesPart(), 
-                                    diff.toSecondsPart());
+        String hms = String.format("%d:%02d:%02d",
+            diff.toHours());//,
+        //diff.toMinutesPart(),
+        //diff.toSecondsPart());
         fwout.write(String.format("time taken = %s\n", hms));
-        
+
         fwout.write("\nProperties:\n");
-        for (Object key: prop.keySet()) {
+        for (Object key : prop.keySet()) {
             fwout.write(key + " = " + prop.getProperty(key.toString()) + "\n");
         }
-        
+
         fwout.write("\nCentroids:\n");
         for (Centroid centr : digest.centroids()) {
             fwout.write(centr.toString() + "\n");
@@ -300,7 +322,8 @@ public class IIDgenerator  {
 
     }
 
-    public static void writeCentroidData(TDigest digest, String digestStatsDir, String outName) throws IOException {
+    public static void writeCentroidData(TDigest digest, String digestStatsDir, String outName)
+        throws IOException {
         Files.createDirectories(Paths.get(digestStatsDir));
 
         System.out.printf("stats file:" + outName + "\n");
@@ -321,7 +344,7 @@ public class IIDgenerator  {
         fwout.close();
         System.out.flush();
     }
-    
+
 
     @SuppressWarnings("unused")
     public static void main(final String[] args) throws Exception {
