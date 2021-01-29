@@ -51,13 +51,32 @@ public class AdversarialAttackTest extends AbstractTest {
     //protected static final String InputStreamFileDir = "../../../../data/inputs/";
     protected static final String InputStreamFileDir = "/aux/vesely/TD-inputs/"; // // CHANGE AS APPROPRIATE
     protected static final String DigestStatsFileName = "t-digest-results";
-    //protected static final String DigestStatsDir = "../../../../data/results/";
-    protected static final String DigestStatsDir = "../../../../TD-stats/"; // CHANGE AS APPROPRIATE
+    //protected static final String DigestStatsDir = "../../../../TD-stats/"; // CHANGE AS APPROPRIATE
+    protected static final String DigestStatsDir = "../../../data/results/";
     protected static final String FileSuffix = ".csv";
 
     @BeforeClass
     public static void freezeSeed() {
         RandomUtils.useTestSeed();
+    }
+
+
+    protected TDigest digest(final double delta, String implementation, ScaleFunction scaleFunction,
+        boolean useAlternatingSort) {
+        TDigest digest;
+        switch (implementation) {
+            case "merging":
+                digest = new MergingDigest(delta);
+                ((MergingDigest) digest).setUseAlternatingSort(useAlternatingSort);
+                break;
+            case "tree":
+                digest = new AVLTreeDigest(delta);
+                break;
+            default:
+                digest = new AVLTreeDigest(-1d);
+        }
+        digest.setScaleFunction(scaleFunction);
+        return  digest;
     }
 
     protected static void writeResults(int compr, int size, TDigest digest,

@@ -39,3 +39,5 @@ Rplots.pdf
 *.csv
 *.tsv
 
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*

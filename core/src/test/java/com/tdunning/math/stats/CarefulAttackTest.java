@@ -267,20 +267,25 @@ public class CarefulAttackTest extends AdversarialAttackTest {
     }
 
 
-    @Test
+    //@Test
     public List<Double> carefulNestedAroundZeroK_3() throws Exception {
-        return carefulNestedAroundZero(ScaleFunction.K_3, 500, 500, true, true);
+        return carefulNestedAroundZero(ScaleFunction.K_3, 500, "merging",
+            false, 100, true,
+            true);
     }
 
-    //@Test
+    @Test
     public List<Double> carefulNestedAroundZeroK_0() throws Exception {
-        return carefulNestedAroundZero(ScaleFunction.K_0, 500, 1000, true, false);
+        return carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",
+            false, 1000, true,
+            false);
         // AVL - runs out of heap at 1415 iteration!
     }
 
 
     //@Test
     public List<Double> carefulNestedAroundZero(ScaleFunction scaleFunction, double delta,
+        String implementation, boolean useAlternatingSort,
         int iterations, boolean writeResults, boolean writeCentroidData) throws Exception {
 
         List<Double> errors = new ArrayList<>();
@@ -288,10 +293,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         double EPSILON = Double.MIN_VALUE;
 
         List<Double> data = new ArrayList<>();
-        MergingDigest digest = new MergingDigest(delta);
-        digest.setUseAlternatingSort(false);
-        //AVLTreeDigest digest = new AVLTreeDigest(delta);
-        digest.setScaleFunction(scaleFunction);
+        TDigest digest = digest(delta, implementation, scaleFunction, useAlternatingSort);
 
         int initializingHalfBatchSize = (int) Math.floor(delta * 10);
 
@@ -553,21 +555,23 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         System.out.println("truth " + countBelow(bad_point, data) / (double) data.size());
         System.out.println("iterations" + iteration);
 
+
+        String altSort = (implementation.equals("merging")) ? "_alt_" + String.valueOf(useAlternatingSort): "";
         if (writeResults) {
             writeResults((int) delta, data.size(), digest, data, DigestStatsDir,
                 DigestStatsDir + String.format(
-                    "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d",
+                    "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
                     iteration,
                     data.size(), digest.scale.toString(), (int) delta, digest.centroidCount(),
-                    digest.byteSize()) + FileSuffix, false);
+                    digest.byteSize(), implementation) + altSort + FileSuffix, false);
         }
         if (writeCentroidData) {
             writeCentroidData(digest,
                 DigestStatsDir + String.format(
-                    "centroids_careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d",
+                    "centroids_careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
                     iteration,
                     data.size(), digest.scale.toString(), (int) delta, digest.centroidCount(),
-                    digest.byteSize()) + FileSuffix);
+                    digest.byteSize(), implementation) + altSort + FileSuffix);
         }
         return errors;
     }
