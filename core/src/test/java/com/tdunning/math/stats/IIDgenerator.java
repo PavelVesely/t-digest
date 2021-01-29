@@ -163,6 +163,8 @@ public class IIDgenerator {
         for (int trial = 0; trial < T; trial++) { // trials
             if (DigestImpl.equals("Merging")) {
                 digest = new MergingDigest(Compression);
+                if (scale == ScaleFunction.K_2_GLUED || scale == ScaleFunction.K_3_GLUED)
+                    ((MergingDigest)digest).setUseAlternatingSort(false); // fixing an issue with asymmetric scale functions (too few centroid in the end)
             } else if (DigestImpl.equals("AVLTree")) {
                 digest = new AVLTreeDigest(Compression);
             } else {
@@ -330,9 +332,9 @@ public class IIDgenerator {
         fwout.write(String.format("t-digest size in bytes = %d\n", digest.byteSize()));
         fwout.write(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(), reqsk.getSerializationBytes()));
         Duration diff = Duration.between(startTime, Instant.now());
-        String hms = String.format("%d:%02d:%02d", diff.toHoursPart(),
-                diff.toMinutesPart(),
-                diff.toSecondsPart());
+        String hms = String.format("%d:%02d:%02d", diff.toHours(),
+                (int)(diff.toMinutes() % 60),
+                (int)(diff.toSeconds() % 60));
         fwout.write(String.format("time taken = %s\n", hms));
 
         fwout.write("\nProperties:\n");
