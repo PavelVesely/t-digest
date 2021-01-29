@@ -133,7 +133,7 @@ public class ReqSketch extends BaseReqSketch {
    * accuracy. Otherwise the low ranks are prioritized for better accuracy.
    * @param reqDebug the debug handler. It may be null.
    */
-  ReqSketch(final int k, final boolean highRankAccuracy, final ReqDebug reqDebug) {
+  public ReqSketch(final int k, final boolean highRankAccuracy, final ReqDebug reqDebug) {
     checkK(k);
     this.k = k;
     hra = highRankAccuracy;
@@ -280,7 +280,7 @@ public class ReqSketch extends BaseReqSketch {
     return hra;
   }
 
-  int getK() {
+  public int getK() {
     return k;
   }
 

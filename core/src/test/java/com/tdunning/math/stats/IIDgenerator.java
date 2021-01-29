@@ -41,6 +41,7 @@ import java.time.*;
 
 import org.junit.Ignore;
 
+import org.apache.datasketches.req.ReqSketch;
 
 /**
  *
@@ -77,6 +78,7 @@ public class IIDgenerator {
     final String DigestStatsFileName;
     final String DigestStatsDir;
     final String FileSuffix;
+    final int reqK;
 
     // vars for experiments
     Random rand;
@@ -114,6 +116,7 @@ public class IIDgenerator {
         DigestStatsFileName = getProperty("DigestStatsFileName");
         DigestStatsDir = getProperty("DigestStatsDir");
         FileSuffix = getProperty("FileSuffix");
+        reqK = Integer.parseInt(getProperty("ReqK"));
 
         List<Double> data = new ArrayList<Double>();
         //Files.createDirectories(Paths.get(InputStreamFileDir));
@@ -127,12 +130,16 @@ public class IIDgenerator {
 //        PrintWriter w = new PrintWriter(inputFilePath);
         rand = new Random();
 
-        // intialize t-digests to collect errors of t-digest:
-        TDigest[] errorDigests = new TDigest[NumberOfPoints
+        // intialize t-digests to collect errors of t-digest and of ReqSketch:
+        TDigest[] errorDigestsTD = new TDigest[NumberOfPoints
             + 1]; // TODO use t-digest or something else?
+        TDigest[] errorDigestsRS = new TDigest[NumberOfPoints
+                                               + 1]; // TODO use t-digest or something else?
         for (int t = 0; t <= NumberOfPoints; t++) {
-            errorDigests[t] = new MergingDigest(200);
-            errorDigests[t].setScaleFunction(ScaleFunction.K_2); // we do not need extreme quantiles
+            errorDigestsTD[t] = new MergingDigest(200);
+            errorDigestsTD[t].setScaleFunction(ScaleFunction.K_0); // we do not need extreme quantiles
+            errorDigestsRS[t] = new MergingDigest(200);
+            errorDigestsRS[t].setScaleFunction(ScaleFunction.K_0); // we do not need extreme quantiles
         }
 
         maxExpBase2 = (int) (Math.log(Double.MAX_VALUE / N) / Math.log(2));
@@ -148,6 +155,10 @@ public class IIDgenerator {
 //        System.out.println("file with generated input: " + inputFilePath);
 //        System.out.flush();
         TDigest digest = null;
+        ReqSketch reqsk = null;
+        //ReqSketchBuilder reqskBuilder = new ReqSketchBuilder();
+        //reqskBuilder.setK(reqK);
+        //reqskBuilder.setLessThanOrEqual(true);
         List<Double> sortedData = null;
         for (int trial = 0; trial < T; trial++) { // trials
             if (DigestImpl.equals("Merging")) {
@@ -158,6 +169,8 @@ public class IIDgenerator {
                 throw new Exception("unknown digest implementation: '" + DigestImpl + "'");
             }
             assert digest.size() == 0;
+            reqsk = new ReqSketch(reqK, true, null);//reqskBuilder.build(); //
+            reqsk.setLessThanOrEqual(true);
             digest.setScaleFunction(scale);
             if (WriteCentroidData && trial == T - 1) {
                 digest.recordAllData(); // tracks centroids during the last trial
@@ -168,11 +181,14 @@ public class IIDgenerator {
                 sortedData.add(item);
                 //if (trial == T-1) data.add(item);
                 digest.add(item);
+                reqsk.update(item);
             }
             Collections.sort(sortedData);
             digest.compress();
-            // extract error
+            reqsk.compress();
+            // extract error from t-digest
             for (int t = 0; t <= NumberOfPoints; t++) {
+                // t-digest error
                 //THE FOLLOWING IS EXTREMELY SLOW: Dist.cdf(item, sortedData);
                 int rTrue = (int) Math.ceil(t / (float) NumberOfPoints * N) + 1;
                 if (rTrue > N) {
@@ -199,7 +215,18 @@ public class IIDgenerator {
                     //relErr = Math.abs(rTrueMax - rEst) / (N - rTrue + 1);
                     addErr = (rEst - rTrueMax) / N;
                 }
-                errorDigests[t].add(addErr);
+                errorDigestsTD[t].add(addErr);
+                
+                // ReqSketch error
+                double rEstRS = reqsk.getRank(item) * N;
+                double addErrRS = 0;
+                if (rEstRS < rTrueMin) {
+                    addErrRS = (rEstRS - rTrueMin) / N;
+                }
+                if (rEstRS > rTrueMax) {
+                    addErrRS = (rEstRS - rTrueMax) / N;
+                }
+                errorDigestsRS[t].add(addErrRS);
             }
         }
         //Collections.sort(data);
@@ -216,7 +243,7 @@ public class IIDgenerator {
                     + FileSuffix);
         }
 
-        writeResults(Compression, n, NumberOfPoints, prop, digest, errorDigests, sortedData,
+        writeResults(Compression, n, NumberOfPoints, prop, digest, reqsk, errorDigestsTD, errorDigestsRS, sortedData,
             startTime, DigestStatsDir,
             DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl + "-stats-PP="
                 + String.valueOf(NumberOfPoints)
@@ -266,7 +293,7 @@ public class IIDgenerator {
 
 
     public static void writeResults(int compr, int size, int numPoints, Properties prop,
-        TDigest digest, TDigest[] errorDigests,
+        TDigest digest, ReqSketch reqsk, TDigest[] errorDigestsTD, TDigest[] errorDigestsRS,
         List<Double> sortedData, Instant startTime, String digestStatsDir, String outName) throws
         IOException {
         Files.createDirectories(Paths.get(digestStatsDir));
@@ -279,28 +306,29 @@ public class IIDgenerator {
         //System.out.flush();
 
         fwout.write(
-            "true quantile;-2 std. dev. of error; median error;+2 std. dev. of error;item\n");
+            "true quantile;TD median error;-2SD error RS;+2SD error RS;item\n");
         for (int t = 0; t <= numPoints; t++) {
             int rTrue = (int) Math.ceil(t / (float) numPoints * size) + 1;
             if (rTrue > size) {
                 rTrue--;
             }
             double item = sortedData.get(rTrue - 1); // in the last trial
-            double addErrM2SD = errorDigests[t].quantile(M2SD);
-            double addErrMed = errorDigests[t].quantile(0.5);
-            double addErrP2SD = errorDigests[t].quantile(P2SD);
+            double addErrTDMed = errorDigestsTD[t].quantile(0.5);
+            double addErrRSM2SD = errorDigestsRS[t].quantile(M2SD);
+            double addErrRSP2SD = errorDigestsRS[t].quantile(P2SD);
 
             //relErr = Math.abs(rTrueMax - rEst) / (size - rTrue + 1);
             fwout.write(String
-                .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrM2SD, addErrMed,
-                    addErrP2SD, String.valueOf(item)));
+                .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrTDMed, addErrRSM2SD, 
+                    addErrRSP2SD, String.valueOf(item)));
         }
         fwout.write("\n");
         fwout.write(String.format("n=%d\n", size));
         fwout.write(String.format("scale func. = %s\n", digest.scale.toString()));
         fwout.write(String.format("delta = %d (compression param of t-digest)\n", compr));
         fwout.write(String.format("# of centroids = %d\n", digest.centroids().size()));
-        fwout.write(String.format("size in bytes = %d\n", digest.byteSize()));
+        fwout.write(String.format("t-digest size in bytes = %d\n", digest.byteSize()));
+        fwout.write(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(), reqsk.getSerializationBytes()));
         Duration diff = Duration.between(startTime, Instant.now());
         String hms = String.format("%d:%02d:%02d",
             diff.toHours());//,
