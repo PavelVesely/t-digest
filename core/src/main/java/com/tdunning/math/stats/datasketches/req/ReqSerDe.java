@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.datasketches.req;
+package com.tdunning.math.stats.datasketches.req;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -129,7 +129,7 @@ class ReqSerDe {
   private static final byte SER_VER = 1;
   private static final byte FAMILY_ID = 17;
 
-  static ReqSketch heapify(final Memory mem) {
+  static ReqSketch heapify(final Memory mem) throws Exception {
     final Buffer buff = mem.asBuffer();
     //Extract first 8 bytes
     final byte preInts = buff.getByte();

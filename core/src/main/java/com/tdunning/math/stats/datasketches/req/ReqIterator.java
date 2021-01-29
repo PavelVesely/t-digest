@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.datasketches.req;
+package com.tdunning.math.stats.datasketches.req;
 
 import java.util.List;
 

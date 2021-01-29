@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package org.apache.datasketches.req;
+package com.tdunning.math.stats.datasketches.req;
 
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.datasketches.InequalitySearch;
+import com.tdunning.math.stats.datasketches.InequalitySearch;
 
 /**
  * Supports searches for quantiles

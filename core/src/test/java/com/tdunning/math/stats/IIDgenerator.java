@@ -41,7 +41,7 @@ import java.time.*;
 
 import org.junit.Ignore;
 
-import org.apache.datasketches.req.ReqSketch;
+import com.tdunning.math.stats.datasketches.req.ReqSketch;
 
 /**
  *
@@ -330,10 +330,9 @@ public class IIDgenerator {
         fwout.write(String.format("t-digest size in bytes = %d\n", digest.byteSize()));
         fwout.write(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(), reqsk.getSerializationBytes()));
         Duration diff = Duration.between(startTime, Instant.now());
-        String hms = String.format("%d:%02d:%02d",
-            diff.toHours());//,
-        //diff.toMinutesPart(),
-        //diff.toSecondsPart());
+        String hms = String.format("%d:%02d:%02d", diff.toHoursPart(),
+                diff.toMinutesPart(),
+                diff.toSecondsPart());
         fwout.write(String.format("time taken = %s\n", hms));
 
         fwout.write("\nProperties:\n");

@@ -269,7 +269,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
 
     @Test
     public List<Double> carefulNestedAroundZeroK_3() throws Exception {
-        return carefulNestedAroundZero(ScaleFunction.K_3, 500, 100, true, true);
+        return carefulNestedAroundZero(ScaleFunction.K_3, 500, 500, true, true);
     }
 
     //@Test
@@ -288,9 +288,9 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         double EPSILON = Double.MIN_VALUE;
 
         List<Double> data = new ArrayList<>();
-        //MergingDigest digest = new MergingDigest(delta);
-        //digest.setUseAlternatingSort(false);
-        AVLTreeDigest digest = new AVLTreeDigest(delta);
+        MergingDigest digest = new MergingDigest(delta);
+        digest.setUseAlternatingSort(false);
+        //AVLTreeDigest digest = new AVLTreeDigest(delta);
         digest.setScaleFunction(scaleFunction);
 
         int initializingHalfBatchSize = (int) Math.floor(delta * 10);

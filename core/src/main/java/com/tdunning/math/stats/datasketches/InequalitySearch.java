@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.datasketches;
+package com.tdunning.math.stats.datasketches;
 
 /**
  * This provides efficient, unique and unambiguous binary searching for inequality comparison criteria

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.datasketches.req;
+package com.tdunning.math.stats.datasketches.req;
 
 /**
  * This abstract class provides a single place to define and document the public API
@@ -48,7 +48,7 @@ abstract class BaseReqSketch {
    * CDF array is the sum of the returned values in positions 0 through j of the returned PMF
    * array.
    */
-  public abstract double[] getCDF(final double[] splitPoints);
+  public abstract double[] getCDF(final double[] splitPoints) throws Exception;
 
   /**
    * If true, the high ranks are prioritized for better accuracy. Otherwise
@@ -110,7 +110,7 @@ abstract class BaseReqSketch {
    * The definition of an "interval" is inclusive of the left splitPoint and exclusive of the right
    * splitPoint, with the exception that the last interval will include maximum value.
    */
-  public abstract double[] getPMF(final double[] splitPoints);
+  public abstract double[] getPMF(final double[] splitPoints) throws Exception;
 
   /**
    * Gets the approximate quantile of the given normalized rank based on the lteq criterion.
@@ -118,7 +118,7 @@ abstract class BaseReqSketch {
    * @param normRank the given normalized rank
    * @return the approximate quantile given the normalized rank.
    */
-  public abstract double getQuantile(final double normRank);
+  public abstract double getQuantile(final double normRank) throws Exception;
 
   /**
    * Gets an array of quantiles that correspond to the given array of normalized ranks.
@@ -126,7 +126,7 @@ abstract class BaseReqSketch {
    * @return the array of quantiles that correspond to the given array of normalized ranks.
    * @see #getQuantile(double)
    */
-  public abstract double[] getQuantiles(final double[] normRanks);
+  public abstract double[] getQuantiles(final double[] normRanks) throws Exception;
 
   /**
    * Computes the normalized rank of the given value in the stream.
@@ -203,7 +203,7 @@ abstract class BaseReqSketch {
    * @param other sketch to be merged into this one.
    * @return this
    */
-  public abstract ReqSketch merge(final ReqSketch other);
+  public abstract ReqSketch merge(final ReqSketch other) throws Exception;
 
   /**
    * Resets this sketch by removing all data and setting all data related variables to their
@@ -241,7 +241,7 @@ abstract class BaseReqSketch {
    * Updates this sketch with the given item.
    * @param item the given item
    */
-  public abstract void update(final double item);
+  public abstract void update(final double item) throws Exception;
 
   /**
    * A detailed, human readable view of the sketch compactors and their data.

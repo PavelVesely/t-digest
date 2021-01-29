@@ -17,10 +17,10 @@
  * under the License.
  */
 
-package org.apache.datasketches.req;
+package com.tdunning.math.stats.datasketches.req;
 
-import static org.apache.datasketches.Util.LS;
-import static org.apache.datasketches.Util.TAB;
+import static com.tdunning.math.stats.datasketches.Util.LS;
+import static com.tdunning.math.stats.datasketches.Util.TAB;
 
 /**
  * For building a new ReqSketch
@@ -48,7 +48,7 @@ public class ReqSketchBuilder {
    * Returns a new ReqSketch with the current configuration of the builder.
    * @return a new ReqSketch
    */
-  public ReqSketch build() {
+  public ReqSketch build() throws Exception {
     final ReqSketch sk = new ReqSketch(bK, bHRA, bReqDebug);
     sk.setLessThanOrEqual(bLtEq);
     return sk;

@@ -48,11 +48,11 @@ public class AdversarialAttackTest extends AbstractTest {
     protected static final Boolean WriteCentroidData = false;
     protected static final double lambda = 0.000001; // for exponential distribution
     protected static final String InputStreamFileName = "t-digest-genInput";
-    protected static final String InputStreamFileDir = "../../../../data/inputs/";
-    //private static final String InputStreamFileDir = "/aux/vesely/TD-inputs/"; // // CHANGE AS APPROPRIATE
+    //protected static final String InputStreamFileDir = "../../../../data/inputs/";
+    protected static final String InputStreamFileDir = "/aux/vesely/TD-inputs/"; // // CHANGE AS APPROPRIATE
     protected static final String DigestStatsFileName = "t-digest-results";
-    protected static final String DigestStatsDir = "../../../../data/results/";
-    //private static final String DigestStatsDir = "../../../../TD-stats/"; // CHANGE AS APPROPRIATE
+    //protected static final String DigestStatsDir = "../../../../data/results/";
+    protected static final String DigestStatsDir = "../../../../TD-stats/"; // CHANGE AS APPROPRIATE
     protected static final String FileSuffix = ".csv";
 
     @BeforeClass

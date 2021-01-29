@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.datasketches.req;
+package com.tdunning.math.stats.datasketches.req;
 
 /**
  * The signaling interface that allows comprehensive analysis of the ReqSketch and ReqCompactor

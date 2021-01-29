@@ -17,19 +17,19 @@
  * under the License.
  */
 
-package org.apache.datasketches.req;
+package com.tdunning.math.stats.datasketches.req;
 
 import static java.lang.Math.round;
-import static org.apache.datasketches.Util.numberOfTrailingOnes;
-import static org.apache.datasketches.req.ReqSketch.INIT_NUMBER_OF_SECTIONS;
-import static org.apache.datasketches.req.ReqSketch.MIN_K;
-import static org.apache.datasketches.req.ReqSketch.NOM_CAP_MULT;
+import static com.tdunning.math.stats.datasketches.Util.numberOfTrailingOnes;
+import static com.tdunning.math.stats.datasketches.req.ReqSketch.INIT_NUMBER_OF_SECTIONS;
+import static com.tdunning.math.stats.datasketches.req.ReqSketch.MIN_K;
+import static com.tdunning.math.stats.datasketches.req.ReqSketch.NOM_CAP_MULT;
 
 import java.util.Random;
 
 import org.apache.datasketches.memory.WritableBuffer;
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.datasketches.req.ReqSketch.CompactorReturn;
+import com.tdunning.math.stats.datasketches.req.ReqSketch.CompactorReturn;
 
 /**
  * The compactor class for the ReqSketch
@@ -117,7 +117,7 @@ class ReqCompactor {
    * Perform a compaction operation on this compactor
    * @return the array of items to be promoted to the next level compactor
    */
-  DoubleBuffer compact(final CompactorReturn cReturn) {
+  DoubleBuffer compact(final CompactorReturn cReturn) throws Exception {
     if (reqDebug != null) { reqDebug.emitCompactingStart(lgWeight); }
     final int startRetItems = buf.getCount();
     final int startNomCap = getNomCapacity();
@@ -208,7 +208,7 @@ class ReqCompactor {
    * @param other the other given compactor
    * @return this
    */
-  ReqCompactor merge(final ReqCompactor other) {
+  ReqCompactor merge(final ReqCompactor other) throws Exception {
     assert lgWeight == other.lgWeight;
     state |= other.state;
     while (ensureEnoughSections()) {}

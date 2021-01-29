@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.datasketches;
+package com.tdunning.math.stats.datasketches;
 
 import static java.lang.Math.ceil;
 import static java.lang.Math.floor;
@@ -25,6 +25,7 @@ import static java.lang.Math.log;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
 import static org.apache.datasketches.hash.MurmurHash3.hash;
+//import com.tdunning.math.stats.datasketches.SketchesArgumentException;
 
 import java.io.File;
 import java.io.IOException;
@@ -319,55 +320,6 @@ public final class Util {
     return s;
   }
 
-  //Seed Hash
-
-  /**
-   * Check if the two seed hashes are equal. If not, throw an SketchesArgumentException.
-   * @param seedHashA the seedHash A
-   * @param seedHashB the seedHash B
-   * @return seedHashA if they are equal
-   */
-  public static short checkSeedHashes(final short seedHashA, final short seedHashB) {
-    if (seedHashA != seedHashB) {
-      throw new SketchesArgumentException(
-          "Incompatible Seed Hashes. " + Integer.toHexString(seedHashA & 0XFFFF)
-            + ", " + Integer.toHexString(seedHashB & 0XFFFF));
-    }
-    return seedHashA;
-  }
-
-  /**
-   * Computes and checks the 16-bit seed hash from the given long seed.
-   * The seed hash may not be zero in order to maintain compatibility with older serialized
-   * versions that did not have this concept.
-   * @param seed <a href="{@docRoot}/resources/dictionary.html#seed">See Update Hash Seed</a>
-   * @return the seed hash.
-   */
-  public static short computeSeedHash(final long seed) {
-    final long[] seedArr = {seed};
-    final short seedHash = (short)(hash(seedArr, 0L)[0] & 0xFFFFL);
-    if (seedHash == 0) {
-      throw new SketchesArgumentException(
-          "The given seed: " + seed + " produced a seedHash of zero. "
-              + "You must choose a different seed.");
-    }
-    return seedHash;
-  }
-
-  //Memory byte alignment
-
-  /**
-   * Checks if parameter v is a multiple of 8 and greater than zero.
-   * @param v The parameter to check
-   * @param argName This name will be part of the error message if the check fails.
-   */
-  public static void checkIfMultipleOf8AndGT0(final long v, final String argName) {
-    if ((v & 0X7L) == 0L && v > 0L) {
-      return;
-    }
-    throw new SketchesArgumentException("The value of the parameter \"" + argName
-      + "\" must be a positive multiple of 8 and greater than zero: " + v);
-  }
 
   /**
    * Returns true if v is a multiple of 8 and greater than zero
@@ -417,33 +369,6 @@ public final class Util {
   }
 
   /**
-   * Checks the given parameter to make sure it is positive, an integer-power of 2 and greater than
-   * zero.
-   *
-   * @param v The input argument.
-   * @param argName Used in the thrown exception.
-   */
-  public static void checkIfPowerOf2(final int v, final String argName) {
-    if (v > 0 && (v & v - 1) == 0) {
-      return;
-    }
-    throw new SketchesArgumentException("The value of the parameter \"" + argName
-        + "\" must be a positive integer-power of 2" + " and greater than 0: " + v);
-  }
-
-  /**
-   * Checks the given value if it is a power of 2. If not, it throws an exception.
-   * Otherwise, returns the log-base2 of the given value.
-   * @param value must be a power of 2 and greater than zero.
-   * @param argName the argument name used in the exception if thrown.
-   * @return the log-base2 of the given value
-   */
-  public static int toLog2(final int value, final String argName) {
-    checkIfPowerOf2(value, argName);
-    return Integer.numberOfTrailingZeros(value);
-  }
-
-  /**
    * Computes the ceiling power of 2 within the range [1, 2^30]. This is the smallest positive power
    * of 2 that equal to or greater than the given n and equal to a mathematical integer.
    *
@@ -463,77 +388,6 @@ public final class Util {
     if (n <= 1) { return 1; }
     final int topPwrOf2 = 1 << 30;
     return n >= topPwrOf2 ? topPwrOf2 : Integer.highestOneBit(n - 1 << 1);
-  }
-
-  /**
-   * Returns a double array of evenly spaced values between value1 and value2 inclusive.
-   * If value2 &gt; value1, the resulting sequence will be increasing.
-   * If value2 &lt; value1, the resulting sequence will be decreasing.
-   * @param value1 will be in index 0 of the returned array
-   * @param value2 will be in the highest index of the returned array
-   * @param num the total number of values including value1 and value2. Must be 2 or greater.
-   * @return a double array of evenly spaced values between value1 and value2 inclusive.
-   */
-  public static double[] evenlySpaced(final double value1, final double value2, final int num) {
-    if (num < 2) {
-      throw new SketchesArgumentException("num must be >= 2");
-    }
-    final double[] out = new double[num];
-    out[0] = value1;
-    out[num - 1] = value2;
-    if (num == 2) { return out; }
-
-    final double delta = (value2 - value1) / (num - 1);
-
-    for (int i = 1; i < num - 1; i++) { out[i] = i * delta + value1; }
-    return out;
-  }
-
-  /**
-   * Returns a float array of evenly spaced values between value1 and value2 inclusive.
-   * If value2 &gt; value1, the resulting sequence will be increasing.
-   * If value2 &lt; value1, the resulting sequence will be decreasing.
-   * @param value1 will be in index 0 of the returned array
-   * @param value2 will be in the highest index of the returned array
-   * @param num the total number of values including value1 and value2. Must be 2 or greater.
-   * @return a float array of evenly spaced values between value1 and value2 inclusive.
-   */
-  public static float[] evenlySpacedFloats(final float value1, final float value2, final int num) {
-    if (num < 2) {
-      throw new SketchesArgumentException("num must be >= 2");
-    }
-    final float[] out = new float[num];
-    out[0] = value1;
-    out[num - 1] = value2;
-    if (num == 2) { return out; }
-
-    final float delta = (value2 - value1) / (num - 1);
-
-    for (int i = 1; i < num - 1; i++) { out[i] = i * delta + value1; }
-    return out;
-  }
-
-  /**
-   * Returns a double array of values between min and max inclusive where the log of the
-   * returned values are evenly spaced.
-   * If value2 &gt; value1, the resulting sequence will be increasing.
-   * If value2 &lt; value1, the resulting sequence will be decreasing.
-   * @param value1 will be in index 0 of the returned array, and must be greater than zero.
-   * @param value2 will be in the highest index of the returned array, and must be greater than zero.
-   * @param num the total number of values including value1 and value2. Must be 2 or greater
-   * @return a double array of exponentially spaced values between value1 and value2 inclusive.
-   */
-  public static double[] evenlyLogSpaced(final double value1, final double value2, final int num) {
-    if (num < 2) {
-      throw new SketchesArgumentException("num must be >= 2");
-    }
-    if (value1 <= 0 || value2 <= 0) {
-      throw new SketchesArgumentException("value1 and value2 must be > 0.");
-    }
-
-    final double[] arr = evenlySpaced(log(value1) / LOG2, log(value2) / LOG2, num);
-    for (int i = 0; i < arr.length; i++) { arr[i] = pow(2.0,arr[i]); }
-    return arr;
   }
 
   /**
@@ -663,19 +517,6 @@ public final class Util {
     return log(value) / LOG2;
   }
 
-  /**
-   * Gives the log2 of a long that is known to be a power of 2.
-   *
-   * @param x number that is greater than zero
-   * @return the log2 of a long that is known to be a power of 2.
-   */
-  public static int simpleLog2OfLong(final long x) {
-    final int exp = Long.numberOfTrailingZeros(x);
-    if (x != 1L << exp) {
-      throw new SketchesArgumentException("Argument x must be a positive power of 2.");
-    }
-    return exp;
-  }
 
   /**
    * Gets the smallest allowed exponent of 2 that it is a sub-multiple of the target by zero,
@@ -770,39 +611,6 @@ public final class Util {
     return next;
   }
 
-  /**
-   * Checks that the given nomLongs is within bounds and returns the Log2 of the ceiling power of 2
-   * of the given nomLongs.
-   * @param nomLongs the given number of nominal longs.  This can be any value from 16 to
-   * 67108864, inclusive.
-   * @return The Log2 of the ceiling power of 2 of the given nomLongs.
-   */
-  public static int checkNomLongs(final int nomLongs) {
-    final int lgNomLongs = Integer.numberOfTrailingZeros(ceilingPowerOf2(nomLongs));
-    if (lgNomLongs > MAX_LG_NOM_LONGS || lgNomLongs < MIN_LG_NOM_LONGS) {
-      throw new SketchesArgumentException("Nominal Entries must be >= 16 and <= 67108864: "
-        + nomLongs);
-    }
-    return lgNomLongs;
-  }
-
-  //Other checks
-
-  /**
-   * Checks the given parameter to make sure it is positive and between 0.0 inclusive and 1.0
-   * inclusive.
-   *
-   * @param p
-   * <a href="{@docRoot}/resources/dictionary.html#p">See Sampling Probability, <i>p</i></a>
-   * @param argName Used in the thrown exception.
-   */
-  public static void checkProbability(final double p, final String argName) {
-    if (p >= 0.0 && p <= 1.0) {
-      return;
-    }
-    throw new SketchesArgumentException("The value of the parameter \"" + argName
-        + "\" must be between 0.0 inclusive and 1.0 inclusive: " + p);
-  }
 
   /**
    * Unsigned compare with longs.
@@ -814,71 +622,5 @@ public final class Util {
     return n1 < n2 ^ n1 < 0 != n2 < 0;
   }
 
-  //Resources
-
-  /**
-   * Gets the absolute path of the given resource file's shortName.
-   *
-   * <p>Note that the ClassLoader.getResource(shortName) returns a URL,
-   * which can have special characters, e.g., "%20" for spaces. This method
-   * obtains the URL, converts it to a URI, then does a uri.getPath(), which
-   * decodes any special characters in the URI path. This is required to make
-   * obtaining resources operating-system independent.</p>
-   *
-   * @param shortFileName the last name in the pathname's name sequence.
-   * @return the absolute path of the given resource file's shortName.
-   */
-  public static String getResourcePath(final String shortFileName) {
-    try {
-      final URL url = Util.class.getClassLoader().getResource(shortFileName);
-      final URI uri = url.toURI();
-      //decodes any special characters
-      final String path = uri.isAbsolute() ? Paths.get(uri).toAbsolutePath().toString() : uri.getPath();
-      return path;
-    } catch (final NullPointerException | URISyntaxException e) {
-      throw new SketchesArgumentException("Cannot find resource: " + shortFileName + LS + e);
-    }
-  }
-
-  /**
-   * Gets the file defined by the given resource file's shortFileName.
-   * @param shortFileName the last name in the pathname's name sequence.
-   * @return the file defined by the given resource file's shortFileName.
-   */
-  public static File getResourceFile(final String shortFileName) {
-    return new File(getResourcePath(shortFileName));
-  }
-
-  /**
-   * Returns a byte array of the contents of the file defined by the given resource file's
-   * shortFileName.
-   * @param shortFileName the last name in the pathname's name sequence.
-   * @return a byte array of the contents of the file defined by the given resource file's
-   * shortFileName.
-   */
-  public static byte[] getResourceBytes(final String shortFileName) {
-    try {
-      return Files.readAllBytes(Paths.get(getResourcePath(shortFileName)));
-    } catch (final IOException e) {
-      throw new SketchesArgumentException("Cannot read resource: " + shortFileName + LS + e);
-    }
-  }
-
-  /**
-   * Checks the sequential validity of the given array of float values.
-   * They must be unique, monotonically increasing and not NaN.
-   * @param values the given array of values
-   */
-  public static void validateValues(final float[] values) {
-    for (int i = 0; i < values.length; i++) {
-      if (!Float.isFinite(values[i])) {
-        throw new SketchesArgumentException("Values must be finite");
-      }
-      if (i < values.length - 1 && values[i] >= values[i + 1]) {
-        throw new SketchesArgumentException(
-          "Values must be unique and monotonically increasing");
-      }
-    }
-  }
 
 }
