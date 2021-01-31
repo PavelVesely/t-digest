@@ -276,7 +276,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
 
     @Test
     public List<Double> carefulNestedAroundZeroK_0() throws Exception {
-        return carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",
+        return carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",  // merging or tree
             false, 1000, true,
             false);
         // AVL - runs out of heap at 1415 iteration!
@@ -314,7 +314,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
             }
         }
 
-        for (int i = 0; i < 2 * initializingHalfBatchSize; i++) {
+        for (int i = 0; i < initializingHalfBatchSize; i++) {
             data.add(-infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
             digest.add(-infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
             data.add(infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
@@ -444,11 +444,11 @@ public class CarefulAttackTest extends AdversarialAttackTest {
 //                data.add(anotherPoint);
 //            }
 //=======
-            double anotherPoint = (centerOfAttack + EPS_2 * (nextStreamValue - centerOfAttack));
+            double anotherPoint = (centerOfAttack + 0.0000001 * (nextStreamValue - centerOfAttack));
 
             //double anotherPoint = centerOfAttack * 0.1;
 
-            double leftEdge = nextStreamValue * 0.4; //+ EPS_2 * (centerOfAttack - nextStreamValue);
+            double leftEdge = nextStreamValue * 0.2; //+ EPS_2 * (centerOfAttack - nextStreamValue);
 //            double leftEdge = nextStreamValue + EPS_2 * (centerOfAttack - nextStreamValue);
 
             //centerOfAttack * (1d - EPS_2) + nextStreamValue * EPS_2; nextStreamValue * 0.1; //centerOfAttack * EPS +
@@ -507,11 +507,10 @@ public class CarefulAttackTest extends AdversarialAttackTest {
 
             if (iteration > 1) {
                 System.out.println("td " + digest.cdf(bad_point));
+                double truth = countBelow(bad_point, data) / (double) data.size();
                 System.out
-                    .println("truth " + countBelow(bad_point, data) / (double) data.size());
-                double error = Math
-                    .abs(
-                        digest.cdf(bad_point) - countBelow(bad_point, data) / (double) data.size());
+                    .println("truth " + truth);
+                double error = Math.abs(digest.cdf(bad_point) - truth);
 
                 errors.add(error);
 
