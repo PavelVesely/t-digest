@@ -62,7 +62,7 @@ public class AdversarialAttackTest extends AbstractTest {
 
 
     protected TDigest digest(final double delta, String implementation, ScaleFunction scaleFunction,
-        boolean useAlternatingSort) {
+        boolean useAlternatingSort, long seed) {
         TDigest digest;
         switch (implementation) {
             case "merging":
@@ -71,12 +71,13 @@ public class AdversarialAttackTest extends AbstractTest {
                 break;
             case "tree":
                 digest = new AVLTreeDigest(delta);
+                ((AVLTreeDigest) digest).gen.setSeed(seed);
                 break;
             default:
                 digest = new AVLTreeDigest(-1d);
         }
         digest.setScaleFunction(scaleFunction);
-        return  digest;
+        return digest;
     }
 
     protected static void writeResults(int compr, int size, TDigest digest,
@@ -214,8 +215,8 @@ public class AdversarialAttackTest extends AbstractTest {
                     fwout.write(d + ",");
                 }
                 index++;
-                fwout.write("\n");}
-            else {
+                fwout.write("\n");
+            } else {
                 fwout.write(c.mean() + ";" + c.count() + "\n");
             }
         }
