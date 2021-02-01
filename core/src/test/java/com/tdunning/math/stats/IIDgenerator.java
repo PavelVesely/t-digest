@@ -124,7 +124,7 @@ public class IIDgenerator {
         LocalDateTime now = LocalDateTime.now();
         String fileNamePart =
             "_" + dtf.format(now) + "_" + Distribution + (NegativeNumbers ? "" : "_PositiveOnly")
-                + "_lgN=" + String.valueOf(LgN);
+                + "_lgN=" + String.valueOf(LgN) + "_lgT=" + String.valueOf(LgT);
 //        String inputFilePath =
 //            InputStreamFileDir + InputStreamFileName + "_" + fileNamePart + FileSuffix;
 //        PrintWriter w = new PrintWriter(inputFilePath);
@@ -136,9 +136,9 @@ public class IIDgenerator {
         TDigest[] errorDigestsRS = new TDigest[NumberOfPoints
                                                + 1]; // TODO use t-digest or something else?
         for (int t = 0; t <= NumberOfPoints; t++) {
-            errorDigestsTD[t] = new MergingDigest(200);
+            errorDigestsTD[t] = new MergingDigest(500);
             errorDigestsTD[t].setScaleFunction(ScaleFunction.K_0); // we do not need extreme quantiles
-            errorDigestsRS[t] = new MergingDigest(200);
+            errorDigestsRS[t] = new MergingDigest(500);
             errorDigestsRS[t].setScaleFunction(ScaleFunction.K_0); // we do not need extreme quantiles
         }
 
@@ -247,8 +247,7 @@ public class IIDgenerator {
 
         writeResults(Compression, n, NumberOfPoints, prop, digest, reqsk, errorDigestsTD, errorDigestsRS, sortedData,
             startTime, DigestStatsDir,
-            DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl + "-stats-PP="
-                + String.valueOf(NumberOfPoints)
+            DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl
                 + "_compr=" + String.valueOf(Compression) + "_" + digest.scale.toString()
                 + FileSuffix);
         // TODO write all properties into results
@@ -308,21 +307,24 @@ public class IIDgenerator {
         //System.out.flush();
 
         fwout.write(
-            "true quantile;TD median error;-2SD error RS;+2SD error RS;item\n");
+            "true quantile;TD -2SD error;TD median error;TD +2SD error;Req -2SD error;Req median error;Req +2SD error;item\n");
         for (int t = 0; t <= numPoints; t++) {
             int rTrue = (int) Math.ceil(t / (float) numPoints * size) + 1;
             if (rTrue > size) {
                 rTrue--;
             }
             double item = sortedData.get(rTrue - 1); // in the last trial
+            double addErrTDM2SD = errorDigestsTD[t].quantile(M2SD);
+            double addErrTDP2SD = errorDigestsTD[t].quantile(P2SD);
             double addErrTDMed = errorDigestsTD[t].quantile(0.5);
             double addErrRSM2SD = errorDigestsRS[t].quantile(M2SD);
             double addErrRSP2SD = errorDigestsRS[t].quantile(P2SD);
+            double addErrRSMed = errorDigestsRS[t].quantile(0.5);
 
             //relErr = Math.abs(rTrueMax - rEst) / (size - rTrue + 1);
             fwout.write(String
-                .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrTDMed, addErrRSM2SD, 
-                    addErrRSP2SD, String.valueOf(item)));
+                .format("%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrTDM2SD, addErrTDMed, addErrTDP2SD, addErrRSM2SD, 
+                        addErrRSMed, addErrRSP2SD, String.valueOf(item)));
         }
         fwout.write("\n");
         fwout.write(String.format("n=%d\n", size));
