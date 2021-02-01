@@ -267,14 +267,14 @@ public class CarefulAttackTest extends AdversarialAttackTest {
     }
 
 
-    //@Test
+    @Test
     public List<Double> carefulNestedAroundZeroK_3() throws Exception {
         return carefulNestedAroundZero(ScaleFunction.K_3, 500, "merging",
             false, 100, true,
             true);
     }
 
-    @Test
+    //@Test
     public List<Double> carefulNestedAroundZeroK_0() throws Exception {
         return carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",  // merging or tree
             false, 1000, true,
@@ -308,7 +308,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         if (!(scaleFunction == ScaleFunction.K_0)) {
             int init = 0;
             while (init < 250 * initializingHalfBatchSize) {
-                data.add(-infty * (2d - ((double) init / 250 / initializingHalfBatchSize)));
+                digest.add(-infty * (2d - ((double) init / 250 / initializingHalfBatchSize)));
                 data.add(-infty * (2d - ((double) init / 250 / initializingHalfBatchSize)));
                 init++;
             }
