@@ -26,6 +26,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
+import com.tdunning.math.stats.datasketches.req.ReqSketch;
+
 import org.junit.Ignore;
 
 /**
@@ -37,7 +39,11 @@ public class AdversarialAttackTest extends AbstractTest {
     protected static final int[] CompressionsForTesting = {
         100}; //100, 200, 500, 1000, 5000, 10000}; // param delta of t-digest
     protected static final int NumberOfPoints = 200; // number of points where we probe the rank estimates
-
+    protected static final int NumberOfTrials = 1000; // number of executions of ReqSketch/KLL on data
+    protected static final int reqK = 4; // accuracy param. of ReqSketch
+    protected static final int kllK = 100; // accuracy param. of KLL
+    
+    
     // params for generating the input
     protected static final int N = 10000000; // stream length
     protected static final int K = 2; // N / K should be roughly at most 200 (otherwise, we don't have enough precision)
@@ -83,20 +89,36 @@ public class AdversarialAttackTest extends AbstractTest {
         return digest;
     }
 
+    // compareTo should be ReqSketch or KLL
     protected static void writeResults(int compr, int size, TDigest digest,
-        List<Double> sortedData, String digestStatsDir, String outName, boolean writeCentroids)
+        List<Double> data, List<Double> sortedData, String compareTo, String digestStatsDir, String outName, boolean writeCentroids)
         throws
-        IOException {
+        IOException, Exception {
         Files.createDirectories(Paths.get(digestStatsDir));
         System.out.printf("stats file:" + outName + "\n");
         File fout = new File(outName);
         fout.createNewFile();
         FileWriter fwout = new FileWriter(fout);
-
-        System.out.printf("computing rel. errors\n");
+        TDigest[] errorDigests = null;
+        if (compareTo.equalsIgnoreCase("reqsketch")) {
+            System.out.printf("running ReqSketch on data\n");
+            errorDigests = runReqSketchOnData(data, sortedData);
+        }
+        //else System.out.printf("nothing to compare to: '" + compareTo + "'\n"); 
+        
+        System.out.printf("\n");
+        System.out.printf(String.format("n=%d\n", size));
+        System.out.printf(String.format("scale func. = %s\n", digest.scale.toString()));
+        System.out.printf(String.format("delta = %d\n", compr));
+        System.out.printf(String.format("# of centroids = %d\n", digest.centroids().size()));
+        System.out.printf(String.format("size in bytes = %d\n", digest.byteSize()));
+        
+        System.out.printf("computing errors\n");
         //System.out.flush();
-
-        fwout.write("true quantile;true rank;est. rank;rel. error;abs. error;item\n");
+        if (errorDigests == null)
+            fwout.write("true quantile;true rank;est. rank;rel. error;abs. error;item\n");
+        else
+            fwout.write(String.format("true quantile;TD abs. error;%s -2SD error; %s +2SD error;item\n", compareTo, compareTo));
         for (int t = 0; t <= NumberOfPoints; t++) {
             //THE FOLLOWING IS EXTREMELY SLOW: Dist.cdf(item, sortedData);
             int rTrue = (int) Math.ceil(t / (float) NumberOfPoints * size) + 1;
@@ -124,9 +146,16 @@ public class AdversarialAttackTest extends AbstractTest {
                 relErr = Math.abs(rTrueMax - rEst) / rTrue;
                 addErr = (rEst - rTrueMax) / size;
             }
-            fwout.write(String
-                .format("%.6f;%d;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, (int) rTrue, rEst,
-                    relErr, addErr, String.valueOf(item)));
+            if (errorDigests == null)
+                fwout.write(String
+                        .format("%.6f;%d;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, (int) rTrue, rEst,
+                                relErr, addErr, String.valueOf(item)));
+            else {
+                double addErrRSM2SD = errorDigests[t].quantile(IIDgenerator.M2SD);
+                double addErrRSP2SD = errorDigests[t].quantile(IIDgenerator.P2SD);
+                fwout.write(String
+                        .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErr, addErrRSM2SD, addErrRSP2SD, String.valueOf(item)));
+            }
         }
 
         if (writeCentroids) {
@@ -144,6 +173,52 @@ public class AdversarialAttackTest extends AbstractTest {
         fwout.close();
         System.out.flush();
 
+    }
+    
+    protected static TDigest[] runReqSketchOnData(List<Double> data, List<Double> sortedData) throws Exception {
+        TDigest[] errorDigests = new TDigest[NumberOfPoints + 1]; // TODO use t-digest or something else?
+        for (int t = 0; t <= NumberOfPoints; t++) {
+            errorDigests[t] = new MergingDigest(500);
+            errorDigests[t].setScaleFunction(ScaleFunction.K_0); // we do not need extreme quantiles
+        }
+        int N = data.size();
+        ReqSketch reqsk = null;
+        for (int trial = 0; trial < NumberOfTrials; trial++) { // trials
+            reqsk = new ReqSketch(reqK, true, null);//reqskBuilder.build(); //
+            reqsk.setLessThanOrEqual(true);
+            for (double item : data) {
+                reqsk.update(item);
+            }
+            reqsk.compress();
+            for (int t = 0; t <= NumberOfPoints; t++) {
+                int rTrue = (int) Math.ceil(t / (float) NumberOfPoints * N) + 1;
+                if (rTrue > N) {
+                    rTrue--;
+                }
+                double item = sortedData.get(rTrue - 1);
+                // handling duplicate values -- rank is then rather an interval
+                int rTrueMin = rTrue;
+                int rTrueMax = rTrue;
+                while (rTrueMin >= 2 && item == sortedData.get(rTrueMin - 2)) {
+                    rTrueMin--;
+                }
+                while (rTrueMax < sortedData.size() && item == sortedData.get(rTrueMax)) {
+                    rTrueMax++;
+                }                
+                // ReqSketch error
+                double rEstRS = reqsk.getRank(item) * N;
+                double addErrRS = 0;
+                if (rEstRS < rTrueMin) {
+                    addErrRS = (rEstRS - rTrueMin) / N;
+                }
+                if (rEstRS > rTrueMax) {
+                    addErrRS = (rEstRS - rTrueMax) / N;
+                }
+                errorDigests[t].add(addErrRS);
+            }
+        }
+        System.out.printf(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(), reqsk.getSerializationBytes()));
+        return errorDigests;
     }
 
     protected static void writeResultsFloat(int compr, int size, TDigest digest,
