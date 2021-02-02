@@ -20,7 +20,6 @@ package com.tdunning.math.stats;
 import org.apache.mahout.common.RandomUtils;
 import org.junit.*;
 
-import java.io.File;
 import java.lang.Math;
 import java.util.*;
 
@@ -257,8 +256,12 @@ public class CarefulAttackTest extends AdversarialAttackTest {
             return (int) Math.ceil((weightToLeft + weightToRight) / ((delta / 2d) - 3d));
         } else if (scaleFunction == ScaleFunction.K_3) {
             double norm = 4 * Math.log(size / delta) + 21;
+            //double norm = 10d;
+            return (int) ((Math.exp(norm / delta) - 1d) * Math
+                .min(weightToRight, weightToLeft));
+        } else if (scaleFunction == ScaleFunction.K_3_NO_NORM) {
             //double norm = 4 * Math.log(1d / delta);
-            //double norm = 1d;
+            double norm = 1d;
             return (int) ((Math.exp(norm / delta) - 1d) * Math
                 .min(weightToRight, weightToLeft));
         } else {
@@ -266,37 +269,37 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         }
     }
 
-    //@Test
+    //@ Test  - WIP
     public List<Double> carefulNestedAroundZeroK_3() throws Exception {
-        return carefulNestedAroundZero(ScaleFunction.K_3, 500, "merging",
-            false, 100, true,
-            true, new NestedInputParams(0.0000001, 0.2, 0.0000000001),
-            RandomUtils.getRandom().nextLong());
+        return carefulNestedAroundZero(ScaleFunction.K_3_NO_NORM, 100, "tree",
+            true, 44, true,
+            true, new NestedInputParams(0.001, 0.1, 0.0001, true),
+            RandomUtils.getRandom().nextLong(), false, false);
     }
 
     //@Test
     public List<Double> carefulNestedAroundZeroK_0() throws Exception {
         return carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",  // merging or tree
             false, 1000, true,
-            false, new NestedInputParams(0.0000001, 0.2, 0.0000000001),
-            RandomUtils.getRandom().nextLong());
-        // AVL - runs out of heap at 1415 iteration!
+            false, new NestedInputParams(0.000000001, 0.2, 0.0000000001, false),
+            RandomUtils.getRandom().nextLong(), false, true);
     }
 
-    @Test
+
+    @Test // resulting data files used by error curves notebook
     public void writeCarefulNestedAroundZeroK_0() throws Exception {
         carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",
             false, 1000, true,
-            false, new NestedInputParams(0.0000001, 0.2, 0.0000000001),
-            981198271346L);
+            false, new NestedInputParams(0.0000001, 0.2, 0.0000000001, false),
+            981198271346L, true, true);
         carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",
             true, 1000, true,
-            false, new NestedInputParams(0.0000001, 0.2, 0.0000000001),
-            981198271346L);
+            false, new NestedInputParams(0.0000001, 0.2, 0.0000000001, false),
+            981198271346L, true, true);
         carefulNestedAroundZero(ScaleFunction.K_0, 500, "tree",
             false, 1000, true,
-            false, new NestedInputParams(0.0000001, 0.2, 0.0000000001),
-            981198271346L);
+            false, new NestedInputParams(0.0000001, 0.2, 0.0000000001, false),
+            981198271346L, true, true);
     }
 
     private class NestedInputParams {
@@ -304,19 +307,24 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         private final double newCentroidNextMinusCenterCoeff;
         private final double newCentroidNextMultiplier;
         private final double rightCentroidNudge;
+        private final boolean useConvexCombination;
 
-        private NestedInputParams(double p1, double p2, double p3) {
+        private NestedInputParams(double p1, double p2, double p3, boolean p4) {
             newCentroidNextMinusCenterCoeff = p1;
             newCentroidNextMultiplier = p2;
             rightCentroidNudge = p3;
+            useConvexCombination = p4;
         }
     }
 
+    /*
+    iterations - will eventually run out of heap space, this caps it
 
-    //@Test
+     */
     public List<Double> carefulNestedAroundZero(ScaleFunction scaleFunction, double delta,
         String implementation, boolean useAlternatingSort, int iterations, boolean writeResults,
-        boolean writeCentroidData, NestedInputParams params, long seed) throws Exception {
+        boolean writeCentroidData, NestedInputParams params, long seed, boolean compareToSorted,
+        boolean maintainRightCentroid) throws Exception {
 
         List<Double> errors = new ArrayList<>();
 
@@ -334,6 +342,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
 
         // try to place the attack in the right tail
         if (!(scaleFunction == ScaleFunction.K_0)) {
+
             int init = 0;
             while (init < 250 * initializingHalfBatchSize) {
                 digest.add(-infty * (2d - ((double) init / 250 / initializingHalfBatchSize)));
@@ -348,6 +357,17 @@ public class CarefulAttackTest extends AdversarialAttackTest {
             data.add(infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
             digest.add(infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
         }
+
+        if (!(scaleFunction == ScaleFunction.K_0)) {
+            long sz = digest.size();
+            double val = digest.min - 1d;
+            for (long i = 0; i < sz * 8; i++) {
+                digest.add(val);
+                data.add(val);
+            }
+        }
+
+
         digest.compress();
 
         Centroid centroidToAttack = belowValue(0d, digest.centroids());
@@ -448,9 +468,6 @@ public class CarefulAttackTest extends AdversarialAttackTest {
             currentDeficit = weightGoal - weightOfAttacked;
             // if (its > 2) {assert currentDeficit >= 0;}
 
-            double EPS = .001;
-            double EPS_2 = .001; // or .01
-
             // fill up the old one
             //double point = centerOfAttack; // * (1d - EPS) + nextStreamValue * EPS;
             for (int v = 0; v < currentDeficit; v++) {
@@ -474,29 +491,37 @@ public class CarefulAttackTest extends AdversarialAttackTest {
 
             for (; v < weightGoal / 5; v++) {
                 double toAdd = anotherPoint; //+ (newCentroidMainValue - anotherPoint) * v  / (double) weightGoal / 10000;
+                if (params.useConvexCombination) {
+                    toAdd += params.newCentroidNextMinusCenterCoeff * anotherPoint;
+                }
                 digest.add(toAdd);
                 data.add(toAdd);
             }
 
             for (; v < weightGoal; v++) {
                 double toAdd = newCentroidMainValue; //+ (anotherPoint - newCentroidMainValue) * v / (double) weightGoal / 10000;
+                if (params.useConvexCombination) {
+                    toAdd -= params.newCentroidNextMinusCenterCoeff * toAdd;
+                }
                 digest.add(toAdd, 1);
                 data.add(toAdd);
             }
 
-            // we also maintain centroid to the right of the attack
-            currentDeficitRight = weightGoal - rightNeighbor.count();
-            //assert currentDeficit >= 0;
+            if (maintainRightCentroid) {
+                // we also maintain centroid to the right of the attack
+                currentDeficitRight = weightGoal - rightNeighbor.count();
+                //assert currentDeficit >= 0;
 
-            //Centroid rightCentroid = aboveValue(newCentroidMainValue, digest.centroids());
-            //int deficit = weightGoal - rightCentroid.count();
-            double rightCentroidVal = rightNeighbor.mean();
-            for (int pp = 0; pp < currentDeficitRight; pp++) {
-                rightCentroidVal = rightCentroidVal + params.rightCentroidNudge;
-                digest.add(rightCentroidVal);
-                data.add(rightCentroidVal);
+                //Centroid rightCentroid = aboveValue(newCentroidMainValue, digest.centroids());
+                //int deficit = weightGoal - rightCentroid.count();
+                double rightCentroidVal = rightNeighbor.mean();
+                for (int pp = 0; pp < currentDeficitRight; pp++) {
+                    rightCentroidVal = rightCentroidVal + params.rightCentroidNudge;
+                    digest.add(rightCentroidVal);
+                    data.add(rightCentroidVal);
+                }
+
             }
-
             System.out.println(String
                 .format(
                     "centerOfAttack:\t%s\npoint:\t\t%s\nanotherPoint:\t%s\nnewCentroidMainValue:  \t%s\nnextStreamValue:\t%s",
@@ -591,6 +616,20 @@ public class CarefulAttackTest extends AdversarialAttackTest {
                     data.size(), digest.scale.toString(), (int) delta, digest.centroidCount(),
                     digest.byteSize(), implementation) + altSort + FileSuffix);
         }
+        if (compareToSorted && writeResults) {
+            TDigest tDigest = rerunOnSortedInput(digest, data);
+            writeResults((int) delta, data.size(), tDigest, data, DigestStatsDir,
+                DigestStatsDir + String.format(
+                    "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
+                    iteration,
+                    data.size(), tDigest.scale.toString(), (int) delta, tDigest.centroidCount(),
+                    tDigest.byteSize(), implementation) + altSort + "_sorted" + FileSuffix, false);
+        }
+        if (compareToSorted && writeCentroidData) {
+            ///
+        }
+
+
         return errors;
     }
 

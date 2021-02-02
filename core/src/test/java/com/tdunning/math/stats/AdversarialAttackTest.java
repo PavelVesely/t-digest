@@ -28,7 +28,6 @@ import java.util.*;
 
 import org.junit.Ignore;
 
-
 /**
  *
  */
@@ -76,7 +75,11 @@ public class AdversarialAttackTest extends AbstractTest {
             default:
                 digest = new AVLTreeDigest(-1d);
         }
-        digest.setScaleFunction(scaleFunction);
+        try {
+            digest.setScaleFunction(scaleFunction);
+        } catch (IllegalArgumentException e) {
+            digest.setUnnormalizedScaleFunction(scaleFunction);
+        }
         return digest;
     }
 
@@ -222,6 +225,31 @@ public class AdversarialAttackTest extends AbstractTest {
         }
         fwout.close();
         System.out.flush();
+    }
+    
+    protected TDigest rerunOnSortedInput(TDigest digest, List<Double> sortedData) throws Exception {
+
+        TDigest freshDigest;
+
+        double delta = digest.compression();
+        if (digest instanceof MergingDigest) {
+            freshDigest = new MergingDigest(delta);
+            ((MergingDigest) freshDigest).setUseAlternatingSort(((MergingDigest) digest).useAlternatingSort);
+        } else if (digest instanceof AVLTreeDigest) {
+            freshDigest = new AVLTreeDigest(delta);
+        } else {
+            throw new Exception("digest has no implementation");
+        }
+
+        freshDigest.setScaleFunction(digest.scale);
+
+        for (double item : sortedData) {
+            freshDigest.add(item);
+        }
+        freshDigest.compress();
+
+        return freshDigest;
+        
     }
 
 }

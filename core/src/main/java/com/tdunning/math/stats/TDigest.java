@@ -175,6 +175,10 @@ public abstract class TDigest implements Serializable {
         this.scale = scaleFunction;
     }
 
+    public void setUnnormalizedScaleFunction(ScaleFunction scaleFunction) {
+        this.scale = scaleFunction;
+    }
+
     /**
      * Serialize this TDigest into a byte buffer.  Note that the serialization used is
      * very straightforward and is considerably larger than strictly necessary.
