@@ -42,6 +42,7 @@ import java.time.*;
 import org.junit.Ignore;
 
 import com.tdunning.math.stats.datasketches.req.ReqSketch;
+import com.tdunning.math.stats.datasketches.kll.KllDoublesSketch;
 
 /**
  *
@@ -84,7 +85,14 @@ public class SpeedComparisonTest extends AbstractTest {
             }
             double reqskNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
             
-            System.out.println(String.format("%d;%.2f;%.2f;%.2f", lgN, mergingNs, treeNs, reqskNs));
+            KllDoublesSketch kll = new KllDoublesSketch(100);
+            startTime = Instant.now();
+            for (long i = 0; i < N; i++) {
+                kll.update(rand.nextDouble());
+            }
+            double kllNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
+            
+            System.out.println(String.format("%d;%.2f;%.2f;%.2f;%.2f", lgN, mergingNs, treeNs, reqskNs, kllNs));
             System.out.flush();
         }
     }
