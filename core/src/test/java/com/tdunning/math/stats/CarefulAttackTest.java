@@ -292,15 +292,15 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",
             false, 1000, true,
             false, new NestedInputParams(0.0000001, 0.2, 0.0000000001, false),
-            981198271346L, true, true, "reqsketch");
-        /*carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",
+            981198271346L, true, true, "kll");
+        carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",
             true, 1000, true,
             false, new NestedInputParams(0.0000001, 0.2, 0.0000000001, false),
             981198271346L, true, true, "kll");
         carefulNestedAroundZero(ScaleFunction.K_0, 500, "tree",
             false, 1000, true,
             false, new NestedInputParams(0.0000001, 0.2, 0.0000000001, false),
-            981198271346L, true, true, "kll");*/
+            981198271346L, true, true, "kll");
     }
 
     private class NestedInputParams {

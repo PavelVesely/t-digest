@@ -27,6 +27,7 @@ import java.nio.file.Paths;
 import java.util.*;
 
 import com.tdunning.math.stats.datasketches.req.ReqSketch;
+import com.tdunning.math.stats.datasketches.kll.KllDoublesSketch;
 
 import org.junit.Ignore;
 
@@ -103,6 +104,10 @@ public class AdversarialAttackTest extends AbstractTest {
         if (compareTo.equalsIgnoreCase("reqsketch")) {
             System.out.printf("running ReqSketch on data\n");
             errorDigests = runReqSketchOnData(data, sortedData);
+        }
+        if (compareTo.equalsIgnoreCase("kll")) {
+            System.out.printf("running KLL on data\n");
+            errorDigests = runKllOnData(data, sortedData);
         }
         //else System.out.printf("nothing to compare to: '" + compareTo + "'\n"); 
         
@@ -218,6 +223,51 @@ public class AdversarialAttackTest extends AbstractTest {
             }
         }
         System.out.printf(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(), reqsk.getSerializationBytes()));
+        return errorDigests;
+    }
+    
+    protected static TDigest[] runKllOnData(List<Double> data, List<Double> sortedData) throws Exception {
+        TDigest[] errorDigests = new TDigest[NumberOfPoints + 1]; // TODO use t-digest or something else?
+        for (int t = 0; t <= NumberOfPoints; t++) {
+            errorDigests[t] = new MergingDigest(500);
+            errorDigests[t].setScaleFunction(ScaleFunction.K_0); // we do not need extreme quantiles
+        }
+        int N = data.size();
+        KllDoublesSketch kll = null;
+        for (int trial = 0; trial < NumberOfTrials; trial++) { // trials
+            kll = new KllDoublesSketch(kllK);
+            for (double item : data) {
+                kll.update(item);
+            }
+            //kll.compress(); // no such method available
+            for (int t = 0; t <= NumberOfPoints; t++) {
+                int rTrue = (int) Math.ceil(t / (float) NumberOfPoints * N) + 1;
+                if (rTrue > N) {
+                    rTrue--;
+                }
+                double item = sortedData.get(rTrue - 1);
+                // handling duplicate values -- rank is then rather an interval
+                int rTrueMin = rTrue;
+                int rTrueMax = rTrue;
+                while (rTrueMin >= 2 && item == sortedData.get(rTrueMin - 2)) {
+                    rTrueMin--;
+                }
+                while (rTrueMax < sortedData.size() && item == sortedData.get(rTrueMax)) {
+                    rTrueMax++;
+                }                
+                // KLL error
+                double rEstRS = kll.getRank(item) * N;
+                double addErrRS = 0;
+                if (rEstRS < rTrueMin) {
+                    addErrRS = (rEstRS - rTrueMin) / N;
+                }
+                if (rEstRS > rTrueMax) {
+                    addErrRS = (rEstRS - rTrueMax) / N;
+                }
+                errorDigests[t].add(addErrRS);
+            }
+        }
+        System.out.printf(String.format("KLL w/ k=%d size in bytes = %d\n", kll.getK(), kll.getSerializedSizeBytes()));
         return errorDigests;
     }
 

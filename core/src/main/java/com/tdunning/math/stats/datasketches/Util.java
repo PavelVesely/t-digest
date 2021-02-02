@@ -622,5 +622,22 @@ public final class Util {
     return n1 < n2 ^ n1 < 0 != n2 < 0;
   }
 
+  /**
+   * Checks the sequential validity of the given array of float values.
+   * They must be unique, monotonically increasing and not NaN.
+   * @param values the given array of values
+   */
+  public static void validateValues(final double[] values) throws Exception {
+    for (int i = 0; i < values.length; i++) {
+      if (!Double.isFinite(values[i])) {
+        throw new Exception("Values must be finite");
+      }
+      if (i < values.length - 1 && values[i] >= values[i + 1]) {
+        throw new Exception(
+          "Values must be unique and monotonically increasing");
+      }
+    }
+  }
+
 
 }
