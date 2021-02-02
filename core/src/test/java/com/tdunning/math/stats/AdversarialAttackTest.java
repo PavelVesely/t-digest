@@ -100,14 +100,14 @@ public class AdversarialAttackTest extends AbstractTest {
         File fout = new File(outName);
         fout.createNewFile();
         FileWriter fwout = new FileWriter(fout);
-        TDigest[] errorDigests = null;
+        KllDoublesSketch[] errorKlls = null;
         if (compareTo.equalsIgnoreCase("reqsketch")) {
             System.out.printf("running ReqSketch on data\n");
-            errorDigests = runReqSketchOnData(data, sortedData);
+            errorKlls = runReqSketchOnData(data, sortedData);
         }
         if (compareTo.equalsIgnoreCase("kll")) {
             System.out.printf("running KLL on data\n");
-            errorDigests = runKllOnData(data, sortedData);
+            errorKlls = runKllOnData(data, sortedData);
         }
         //else System.out.printf("nothing to compare to: '" + compareTo + "'\n"); 
         
@@ -120,7 +120,7 @@ public class AdversarialAttackTest extends AbstractTest {
         
         System.out.printf("computing errors\n");
         //System.out.flush();
-        if (errorDigests == null)
+        if (errorKlls == null)
             fwout.write("true quantile;true rank;est. rank;rel. error;abs. error;item\n");
         else
             fwout.write(String.format("true quantile;TD abs. error;%s -2SD error; %s +2SD error;item\n", compareTo, compareTo));
@@ -151,13 +151,13 @@ public class AdversarialAttackTest extends AbstractTest {
                 relErr = Math.abs(rTrueMax - rEst) / rTrue;
                 addErr = (rEst - rTrueMax) / size;
             }
-            if (errorDigests == null)
+            if (errorKlls == null)
                 fwout.write(String
                         .format("%.6f;%d;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, (int) rTrue, rEst,
                                 relErr, addErr, String.valueOf(item)));
             else {
-                double addErrRSM2SD = errorDigests[t].quantile(IIDgenerator.M2SD);
-                double addErrRSP2SD = errorDigests[t].quantile(IIDgenerator.P2SD);
+                double addErrRSM2SD = errorKlls[t].getQuantile(IIDgenerator.M2SD);
+                double addErrRSP2SD = errorKlls[t].getQuantile(IIDgenerator.P2SD);
                 fwout.write(String
                         .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErr, addErrRSM2SD, addErrRSP2SD, String.valueOf(item)));
             }
@@ -180,11 +180,10 @@ public class AdversarialAttackTest extends AbstractTest {
 
     }
     
-    protected static TDigest[] runReqSketchOnData(List<Double> data, List<Double> sortedData) throws Exception {
-        TDigest[] errorDigests = new TDigest[NumberOfPoints + 1]; // TODO use t-digest or something else?
+    protected static KllDoublesSketch[] runReqSketchOnData(List<Double> data, List<Double> sortedData) throws Exception {
+        KllDoublesSketch[] errorKlls = new KllDoublesSketch[NumberOfPoints + 1]; // TODO use t-digest or something else?
         for (int t = 0; t <= NumberOfPoints; t++) {
-            errorDigests[t] = new MergingDigest(500);
-            errorDigests[t].setScaleFunction(ScaleFunction.K_0); // we do not need extreme quantiles
+            errorKlls[t] = new KllDoublesSketch(200); // we do not need extreme quantiles
         }
         int N = data.size();
         ReqSketch reqsk = null;
@@ -219,18 +218,17 @@ public class AdversarialAttackTest extends AbstractTest {
                 if (rEstRS > rTrueMax) {
                     addErrRS = (rEstRS - rTrueMax) / N;
                 }
-                errorDigests[t].add(addErrRS);
+                errorKlls[t].update(addErrRS);
             }
         }
         System.out.printf(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(), reqsk.getSerializationBytes()));
-        return errorDigests;
+        return errorKlls;
     }
     
-    protected static TDigest[] runKllOnData(List<Double> data, List<Double> sortedData) throws Exception {
-        TDigest[] errorDigests = new TDigest[NumberOfPoints + 1]; // TODO use t-digest or something else?
+    protected static KllDoublesSketch[] runKllOnData(List<Double> data, List<Double> sortedData) throws Exception {
+        KllDoublesSketch[] errorKlls = new KllDoublesSketch[NumberOfPoints + 1]; // TODO use t-digest or something else?
         for (int t = 0; t <= NumberOfPoints; t++) {
-            errorDigests[t] = new MergingDigest(500);
-            errorDigests[t].setScaleFunction(ScaleFunction.K_0); // we do not need extreme quantiles
+            errorKlls[t] = new KllDoublesSketch(200);
         }
         int N = data.size();
         KllDoublesSketch kll = null;
@@ -264,11 +262,11 @@ public class AdversarialAttackTest extends AbstractTest {
                 if (rEstRS > rTrueMax) {
                     addErrRS = (rEstRS - rTrueMax) / N;
                 }
-                errorDigests[t].add(addErrRS);
+                errorKlls[t].update(addErrRS);
             }
         }
         System.out.printf(String.format("KLL w/ k=%d size in bytes = %d\n", kll.getK(), kll.getSerializedSizeBytes()));
-        return errorDigests;
+        return errorKlls;
     }
 
     protected static void writeResultsFloat(int compr, int size, TDigest digest,

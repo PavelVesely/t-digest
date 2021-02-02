@@ -42,6 +42,7 @@ import java.time.*;
 import org.junit.Ignore;
 
 import com.tdunning.math.stats.datasketches.req.ReqSketch;
+import com.tdunning.math.stats.datasketches.kll.KllDoublesSketch;
 
 /**
  *
@@ -130,16 +131,12 @@ public class IIDgenerator {
 //        PrintWriter w = new PrintWriter(inputFilePath);
         rand = new Random();
 
-        // intialize t-digests to collect errors of t-digest and of ReqSketch:
-        TDigest[] errorDigestsTD = new TDigest[NumberOfPoints
-            + 1]; // TODO use t-digest or something else?
-        TDigest[] errorDigestsRS = new TDigest[NumberOfPoints
-                                               + 1]; // TODO use t-digest or something else?
+        // intialize klls to collect errors of t-digest and of ReqSketch:
+        KllDoublesSketch[] errorKllsTD = new KllDoublesSketch[NumberOfPoints + 1];
+        KllDoublesSketch[] errorKllsRS = new KllDoublesSketch[NumberOfPoints + 1];
         for (int t = 0; t <= NumberOfPoints; t++) {
-            errorDigestsTD[t] = new MergingDigest(500);
-            errorDigestsTD[t].setScaleFunction(ScaleFunction.K_0); // we do not need extreme quantiles
-            errorDigestsRS[t] = new MergingDigest(500);
-            errorDigestsRS[t].setScaleFunction(ScaleFunction.K_0); // we do not need extreme quantiles
+            errorKllsTD[t] = new KllDoublesSketch(200);  // we do not need extreme quantiles
+            errorKllsRS[t] = new KllDoublesSketch(200);
         }
 
         maxExpBase2 = (int) (Math.log(Double.MAX_VALUE / N) / Math.log(2));
@@ -217,7 +214,7 @@ public class IIDgenerator {
                     //relErr = Math.abs(rTrueMax - rEst) / (N - rTrue + 1);
                     addErr = (rEst - rTrueMax) / N;
                 }
-                errorDigestsTD[t].add(addErr);
+                errorKllsTD[t].update(addErr);
                 
                 // ReqSketch error
                 double rEstRS = reqsk.getRank(item) * N;
@@ -228,7 +225,7 @@ public class IIDgenerator {
                 if (rEstRS > rTrueMax) {
                     addErrRS = (rEstRS - rTrueMax) / N;
                 }
-                errorDigestsRS[t].add(addErrRS);
+                errorKllsRS[t].update(addErrRS);
             }
         }
         //Collections.sort(data);
@@ -245,7 +242,7 @@ public class IIDgenerator {
                     + FileSuffix);
         }
 
-        writeResults(Compression, n, NumberOfPoints, prop, digest, reqsk, errorDigestsTD, errorDigestsRS, sortedData,
+        writeResults(Compression, n, NumberOfPoints, prop, digest, reqsk, errorKllsTD, errorKllsRS, sortedData,
             startTime, DigestStatsDir,
             DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl
                 + "_compr=" + String.valueOf(Compression) + "_" + digest.scale.toString()
@@ -294,7 +291,7 @@ public class IIDgenerator {
 
 
     public static void writeResults(int compr, int size, int numPoints, Properties prop,
-        TDigest digest, ReqSketch reqsk, TDigest[] errorDigestsTD, TDigest[] errorDigestsRS,
+        TDigest digest, ReqSketch reqsk, KllDoublesSketch[] errorKllsTD, KllDoublesSketch[] errorKllsRS,
         List<Double> sortedData, Instant startTime, String digestStatsDir, String outName) throws
         IOException {
         Files.createDirectories(Paths.get(digestStatsDir));
@@ -314,12 +311,12 @@ public class IIDgenerator {
                 rTrue--;
             }
             double item = sortedData.get(rTrue - 1); // in the last trial
-            double addErrTDM2SD = errorDigestsTD[t].quantile(M2SD);
-            double addErrTDP2SD = errorDigestsTD[t].quantile(P2SD);
-            double addErrTDMed = errorDigestsTD[t].quantile(0.5);
-            double addErrRSM2SD = errorDigestsRS[t].quantile(M2SD);
-            double addErrRSP2SD = errorDigestsRS[t].quantile(P2SD);
-            double addErrRSMed = errorDigestsRS[t].quantile(0.5);
+            double addErrTDM2SD = errorKllsTD[t].getQuantile(M2SD);
+            double addErrTDP2SD = errorKllsTD[t].getQuantile(P2SD);
+            double addErrTDMed = errorKllsTD[t].getQuantile(0.5);
+            double addErrRSM2SD = errorKllsRS[t].getQuantile(M2SD);
+            double addErrRSP2SD = errorKllsRS[t].getQuantile(P2SD);
+            double addErrRSMed = errorKllsRS[t].getQuantile(0.5);
 
             //relErr = Math.abs(rTrueMax - rEst) / (size - rTrue + 1);
             fwout.write(String
