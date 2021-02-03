@@ -227,7 +227,8 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         List<Double> sortedData = new ArrayList<>(data);
         Collections.sort(sortedData);
 
-        writeResults((int) delta, data.size(), digest, data, sortedData, "DO NOT COMPARE TO ANYTHING",  DigestStatsDir, "careful_" + its,
+        writeResults((int) delta, data.size(), digest, data, sortedData,
+            "DO NOT COMPARE TO ANYTHING", DigestStatsDir, "careful_" + its,
             true);
 
         double bad_point = (previous_c + previous_y) / 2d;
@@ -274,7 +275,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
     public List<Double> carefulNestedAroundZeroK_3() throws Exception {
         return carefulNestedAroundZero(ScaleFunction.K_3_NO_NORM, 100, "tree",
             true, 44, true,
-            true, new NestedInputParams(0.001, 0.1, 0.0001, true, 0.5, false, 0.2, 10),
+            false, new NestedInputParams(0.001, 0.1, 0.0001, true, 0.5, false, 0.2, 10),
             RandomUtils.getRandom().nextLong(), false, false, "reqsketch");
     }
 
@@ -291,15 +292,15 @@ public class CarefulAttackTest extends AdversarialAttackTest {
     public void writeCarefulNestedAroundZeroK_0() throws Exception {
         carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",
             false, 1000, true,
-            false, new NestedInputParams(0.0000001, 0.21, 0.0000000001, false, 0.5, false, 0.2, 10),
+            true, new NestedInputParams(0.0000001, 0.21, 0.0000000001, false, 0.5, false, 0.2, 10),
             981198271346L, true, true, "kll");
         carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",
             true, 1000, true,
-            false, new NestedInputParams(0.0000001, 0.21, 0.0000000001, false, 0.5, false, 0.2, 10),
+            true, new NestedInputParams(0.0000001, 0.21, 0.0000000001, false, 0.5, false, 0.2, 10),
             981198271346L, true, true, "kll");
         carefulNestedAroundZero(ScaleFunction.K_0, 500, "tree",
             false, 1300, true,
-            false, new NestedInputParams(0.000000001, 0.26, 0.0000000001, false, 1/1.48d, true, 0.18, 8),
+            true, new NestedInputParams(0.000000001, 0.26, 0.0000000001, false, 1/1.48d, true, 0.18, 8),
             981198271346L, true, false, "kll");
     }
 
@@ -338,7 +339,9 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         List<Double> errors = new ArrayList<>();
 
         List<Double> data = new ArrayList<>();
-        TDigest digest = digest(delta, implementation, scaleFunction, useAlternatingSort, seed);
+        List<Double> sortedData = new ArrayList<>();
+        TDigest digest = digest(delta, implementation, scaleFunction, useAlternatingSort, seed,
+            writeCentroidData);
 
         int initializingHalfBatchSize = (int) Math.floor(delta * params.initBatchSizeMult);
 
@@ -351,20 +354,26 @@ public class CarefulAttackTest extends AdversarialAttackTest {
 
         // try to place the attack in the right tail
         if (!(scaleFunction == ScaleFunction.K_0)) {
-
             int init = 0;
             while (init < 250 * initializingHalfBatchSize) {
-                digest.add(-infty * (2d - ((double) init / 250 / initializingHalfBatchSize)));
-                data.add(-infty * (2d - ((double) init / 250 / initializingHalfBatchSize)));
+                double p = -infty * (2d - ((double) init / 250 / initializingHalfBatchSize));
+                digest.add(p);
+                data.add(p);
+                sortedData.add(p);
                 init++;
             }
         }
 
         for (int i = 0; i < initializingHalfBatchSize; i++) {
-            data.add(-infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
-            digest.add(-infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
-            data.add(infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
-            digest.add(infty * (1d - ((double) i / 2 / initializingHalfBatchSize)));
+            double p = -infty * (1d - ((double) i / 2 / initializingHalfBatchSize));
+            sortedData.add(p);
+            digest.add(p);
+            data.add(p);
+
+            double q = infty * (1d - ((double) i / 2 / initializingHalfBatchSize));
+            sortedData.add(q);
+            digest.add(q);
+            data.add(q);
         }
 
         if (!(scaleFunction == ScaleFunction.K_0)) {
@@ -373,9 +382,9 @@ public class CarefulAttackTest extends AdversarialAttackTest {
             for (long i = 0; i < sz * 8; i++) {
                 digest.add(val);
                 data.add(val);
+                sortedData.add(val);
             }
         }
-
 
         digest.compress();
 
@@ -395,11 +404,11 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         int currentDeficitRight;
         int weightOfRightNeighbor;
 
-        Collections.sort(data);
+        Collections.sort(sortedData);
 
         //  1> maximal error so far: 0.3265282585631959 on 1244
         //detectDupes(data, "initial batch");
-        double nextStreamValue = nextValue(centerOfAttack, data);
+        double nextStreamValue = nextValue(centerOfAttack, sortedData);
 
         double previous_c;
         double previous_y;
@@ -428,8 +437,8 @@ public class CarefulAttackTest extends AdversarialAttackTest {
 
             weightToLeft = digest.size() - weightOfAttacked - weightOfRightNeighbor - weightToRight;
 
-            Collections.sort(data);
-            nextStreamValue = nextValue(0, data);   //centerOfAttack
+            Collections.sort(sortedData);
+            nextStreamValue = nextValue(0, sortedData);   //centerOfAttack
             //nextStreamValue = nextValue(centerOfAttack, data); //<-- doesn't work very well
 
             if (nextStreamValue < 100 * Double.MIN_VALUE) {
@@ -484,6 +493,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
                 double point = centerOfAttack;
                 digest.add(point, 1);
                 data.add(point);
+                sortedData.add(point);
             }
 
             // make the new one
@@ -505,6 +515,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
                 }
                 digest.add(toAdd);
                 data.add(toAdd);
+                sortedData.add(toAdd);
             }
             if (params.compressBeforePositiveUpdates)
                 digest.compress();
@@ -516,6 +527,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
                 }
                 digest.add(toAdd, 1);
                 data.add(toAdd);
+                sortedData.add(toAdd);
             }
 
             if (maintainRightCentroid) {
@@ -530,8 +542,8 @@ public class CarefulAttackTest extends AdversarialAttackTest {
                     rightCentroidVal = rightCentroidVal + params.rightCentroidNudge;
                     digest.add(rightCentroidVal);
                     data.add(rightCentroidVal);
+                    sortedData.add(rightCentroidVal);
                 }
-
             }
             System.out.println(String
                 .format(
@@ -550,7 +562,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
             Centroid belowZeroC = belowValue(0, digest.centroids());
             Centroid aboveZeroC = aboveValue(0, digest.centroids());
             //double bad_point = belowZeroC.mean();
-            Collections.sort(data);
+            Collections.sort(sortedData);
 
             // detectDupes(data, "iteration " + its);
             // detectDupes(digest.centroids());
@@ -562,7 +574,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
 
             if (iteration > 1) {
                 System.out.println("td " + digest.cdf(bad_point));
-                double truth = countBelow(bad_point, data) / (double) data.size();
+                double truth = countBelow(bad_point, sortedData) / (double) data.size();
                 System.out
                     .println("truth " + truth);
                 double error = Math.abs(digest.cdf(bad_point) - truth);
@@ -603,7 +615,6 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         }
 
         double bad_point = 0; // (previous_c + previous_y) / 2d;
-        List<Double> sortedData = new ArrayList<>(data);
         Collections.sort(sortedData);
 
         //System.out.println("td " + digest.cdf(bad_point));
@@ -613,7 +624,8 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         String altSort =
             (implementation.equals("merging")) ? "_alt_" + String.valueOf(useAlternatingSort) : "";
         if (writeResults) {
-            writeResults((int) delta, data.size(), digest, data, sortedData, compareTo, DigestStatsDir,
+            writeResults((int) delta, data.size(), digest, data, sortedData, compareTo,
+                DigestStatsDir,
                 DigestStatsDir + String.format(
                     "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
                     iteration,
@@ -628,20 +640,27 @@ public class CarefulAttackTest extends AdversarialAttackTest {
                     data.size(), digest.scale.toString(), (int) delta, digest.centroidCount(),
                     digest.byteSize(), implementation) + altSort + FileSuffix);
         }
-        if (compareToSorted && writeResults) {
+        if (compareToSorted) {
             TDigest tDigest = rerunOnSortedInput(digest, sortedData);
-            writeResults((int) delta, data.size(), tDigest, data, sortedData, compareTo, DigestStatsDir,
-                DigestStatsDir + String.format(
-                    "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
-                    iteration,
-                    data.size(), tDigest.scale.toString(), (int) delta, tDigest.centroidCount(),
-                    tDigest.byteSize(), implementation) + altSort + "_sorted" + FileSuffix, false);
+            if (writeResults) {
+                writeResults((int) delta, data.size(), tDigest, data, sortedData, compareTo,
+                    DigestStatsDir,
+                    DigestStatsDir + String.format(
+                        "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
+                        iteration,
+                        data.size(), tDigest.scale.toString(), (int) delta, tDigest.centroidCount(),
+                        tDigest.byteSize(), implementation) + altSort + "_sorted" + FileSuffix,
+                    false);
+            }
+            if (writeCentroidData) {
+                writeCentroidData(tDigest,
+                    DigestStatsDir + String.format(
+                        "centroids_careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
+                        iteration,
+                        data.size(), tDigest.scale.toString(), (int) delta, tDigest.centroidCount(),
+                        tDigest.byteSize(), implementation) + altSort + "_sorted" +  FileSuffix);
+            }
         }
-        if (compareToSorted && writeCentroidData) {
-            ///
-        }
-
-
         return errors;
     }
 
