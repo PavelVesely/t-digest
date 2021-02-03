@@ -65,6 +65,7 @@ public class SpeedComparisonTest extends AbstractTest {
         for (int lgN = LgNmin; lgN <= LgNmax; lgN++) {
             long N = 1l << lgN;
             MergingDigest merging = new MergingDigest(500);
+            merging.setScaleFunction(ScaleFunction.K_2);
             Instant startTime = Instant.now();
             for (long i = 0; i < N; i++) {
                 merging.add(rand.nextDouble());
@@ -72,6 +73,7 @@ public class SpeedComparisonTest extends AbstractTest {
             double mergingNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
 
             AVLTreeDigest tree = new AVLTreeDigest(500);
+            tree.setScaleFunction(ScaleFunction.K_2);
             startTime = Instant.now();
             for (long i = 0; i < N; i++) {
                 tree.add(rand.nextDouble());
