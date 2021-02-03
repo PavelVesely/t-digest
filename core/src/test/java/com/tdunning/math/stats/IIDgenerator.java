@@ -246,7 +246,7 @@ public class IIDgenerator {
             startTime, DigestStatsDir,
             DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl
                 + "_compr=" + String.valueOf(Compression) + "_" + digest.scale.toString()
-                + FileSuffix);
+                + FileSuffix, true);
         // TODO write all properties into results
     }
 
@@ -265,6 +265,9 @@ public class IIDgenerator {
         switch (Distribution) {
             case "loguniform":
                 item = Math.pow(2, (rand.nextDouble() - 0.5) * 2 * maxExpBase2);
+                break;
+            case "loguniform2":
+                item = Math.pow(2, (Math.pow(rand.nextDouble(), 2) - 0.5) * 2 * maxExpBase2);
                 break;
             case "exponential":
                 item = Math.log(1 - rand.nextDouble()) / (-lambda);
@@ -292,10 +295,11 @@ public class IIDgenerator {
 
     public static void writeResults(int compr, int size, int numPoints, Properties prop,
         TDigest digest, ReqSketch reqsk, KllDoublesSketch[] errorKllsTD, KllDoublesSketch[] errorKllsRS,
-        List<Double> sortedData, Instant startTime, String digestStatsDir, String outName) throws
+        List<Double> sortedData, Instant startTime, String digestStatsDir, String outName, boolean writeCentroids) throws
         IOException {
         Files.createDirectories(Paths.get(digestStatsDir));
         System.out.printf("stats file:" + outName + "\n");
+            
         File fout = new File(outName);
         fout.createNewFile();
         FileWriter fwout = new FileWriter(fout);
@@ -304,7 +308,8 @@ public class IIDgenerator {
         //System.out.flush();
 
         fwout.write(
-            "true quantile;TD -2SD error;TD median error;TD +2SD error;Req -2SD error;Req median error;Req +2SD error;item\n");
+            "true quantile;t-digest median error;ReqSketch -2SD error;ReqSketch +2SD error;item\n");
+            //"true quantile;t-digest -2SD error;TD median error;TD +2SD error;Req -2SD error;Req median error;Req +2SD error;item\n");
         for (int t = 0; t <= numPoints; t++) {
             int rTrue = (int) Math.ceil(t / (float) numPoints * size) + 1;
             if (rTrue > size) {
@@ -320,34 +325,40 @@ public class IIDgenerator {
 
             //relErr = Math.abs(rTrueMax - rEst) / (size - rTrue + 1);
             fwout.write(String
-                .format("%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrTDM2SD, addErrTDMed, addErrTDP2SD, addErrRSM2SD, 
-                        addErrRSMed, addErrRSP2SD, String.valueOf(item)));
-        }
-        fwout.write("\n");
-        fwout.write(String.format("n=%d\n", size));
-        fwout.write(String.format("scale func. = %s\n", digest.scale.toString()));
-        fwout.write(String.format("delta = %d (compression param of t-digest)\n", compr));
-        fwout.write(String.format("# of centroids = %d\n", digest.centroids().size()));
-        fwout.write(String.format("t-digest size in bytes = %d\n", digest.byteSize()));
-        fwout.write(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(), reqsk.getSerializationBytes()));
-        Duration diff = Duration.between(startTime, Instant.now());
-        String hms = String.format("%d:%02d:%02d", diff.toHours(),
-                (int)(diff.toMinutes() % 60),
-                (int)(diff.toSeconds() % 60));
-        fwout.write(String.format("time taken = %s\n", hms));
-
-        fwout.write("\nProperties:\n");
-        for (Object key : prop.keySet()) {
-            fwout.write(key + " = " + prop.getProperty(key.toString()) + "\n");
-        }
-
-        fwout.write("\nCentroids:\n");
-        for (Centroid centr : digest.centroids()) {
-            fwout.write(centr.toString() + "\n");
+                .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrTDMed, addErrRSM2SD, 
+                        addErrRSP2SD, String.valueOf(item)));
         }
         fwout.close();
-        System.out.flush();
+        
 
+        if (writeCentroids) {
+            fout = new File(outName + "_centroids");
+            System.out.printf("centroids file: outName + _centroids\n");
+            fout.createNewFile();
+            fwout = new FileWriter(fout);
+            fwout.write(String.format("n=%d\n", size));
+            fwout.write(String.format("scale func. = %s\n", digest.scale.toString()));
+            fwout.write(String.format("delta = %d (compression param of t-digest)\n", compr));
+            fwout.write(String.format("# of centroids = %d\n", digest.centroids().size()));
+            fwout.write(String.format("t-digest size in bytes = %d\n", digest.byteSize()));
+            fwout.write(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(), reqsk.getSerializationBytes()));
+            Duration diff = Duration.between(startTime, Instant.now());
+            String hms = String.format("%d:%02d:%02d", diff.toHours(),
+                    (int)(diff.toMinutes() % 60),
+                    (int)(diff.toSeconds() % 60));
+            fwout.write(String.format("time taken = %s\n", hms));
+    
+            fwout.write("\nProperties:\n");
+            for (Object key : prop.keySet()) {
+                fwout.write(key + " = " + prop.getProperty(key.toString()) + "\n");
+            }
+    
+            fwout.write("\nCentroids:\n");
+            for (Centroid centr : digest.centroids()) {
+                fwout.write(centr.toString() + "\n");
+            }
+            fwout.close();
+        }
     }
 
     public static void writeCentroidData(TDigest digest, String digestStatsDir, String outName)
