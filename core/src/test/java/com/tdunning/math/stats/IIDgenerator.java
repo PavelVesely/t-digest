@@ -80,11 +80,12 @@ public class IIDgenerator {
     final String DigestStatsDir;
     final String FileSuffix;
     final int reqK;
+    int maxExp;
 
     // vars for experiments
     Random rand;
     Properties prop;
-    int maxExpBase2;
+    int maxExpBase10;
     int n;
 
 
@@ -118,6 +119,7 @@ public class IIDgenerator {
         DigestStatsDir = getProperty("DigestStatsDir");
         FileSuffix = getProperty("FileSuffix");
         reqK = Integer.parseInt(getProperty("ReqK"));
+        maxExp = Integer.parseInt(getProperty("MaxExp"));
 
         List<Double> data = new ArrayList<Double>();
         //Files.createDirectories(Paths.get(InputStreamFileDir));
@@ -125,7 +127,7 @@ public class IIDgenerator {
         LocalDateTime now = LocalDateTime.now();
         String fileNamePart =
             "_" + dtf.format(now) + "_" + Distribution + (NegativeNumbers ? "" : "_PositiveOnly")
-                + "_lgN=" + String.valueOf(LgN) + "_lgT=" + String.valueOf(LgT);
+                + "_lgN=" + String.valueOf(LgN) + "_lgT=" + String.valueOf(LgT) + (maxExp > 0 ? "_maxExp=" + String.valueOf(maxExp) : "");
 //        String inputFilePath =
 //            InputStreamFileDir + InputStreamFileName + "_" + fileNamePart + FileSuffix;
 //        PrintWriter w = new PrintWriter(inputFilePath);
@@ -139,7 +141,9 @@ public class IIDgenerator {
             errorKllsRS[t] = new KllDoublesSketch(200);
         }
 
-        maxExpBase2 = (int) (Math.log(Double.MAX_VALUE / N) / Math.log(2));
+        maxExpBase10 = (int) (Math.log(Double.MAX_VALUE / N) / Math.log(10));
+        if (maxExp == 0)
+            maxExp = maxExpBase10; 
 
 //        for (n = 0; n < N; n++) {
 //            double item = generateItem();
@@ -264,10 +268,10 @@ public class IIDgenerator {
         double item = 0;
         switch (Distribution) {
             case "loguniform":
-                item = Math.pow(2, (rand.nextDouble() - 0.5) * 2 * maxExpBase2);
+                item = Math.pow(10, (rand.nextDouble() - 0.5) * 2 * maxExp);
                 break;
             case "loguniform2":
-                item = Math.pow(2, (Math.pow(rand.nextDouble(), 2) - 0.5) * 2 * maxExpBase2);
+                item = Math.pow(10, (Math.pow(rand.nextDouble(), 2) - 0.5) * 2 * maxExp);
                 break;
             case "exponential":
                 item = Math.log(1 - rand.nextDouble()) / (-lambda);
