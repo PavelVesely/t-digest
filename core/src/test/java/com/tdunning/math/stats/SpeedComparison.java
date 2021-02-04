@@ -48,56 +48,92 @@ import com.tdunning.math.stats.datasketches.kll.KllDoublesSketch;
  *
  */
 
-public class SpeedComparisonTest extends AbstractTest {
-    static final int LgNmin = 20;
-    static final int LgNmax = 30;
+public class SpeedComparison {
     
-    @BeforeClass
-    public static void freezeSeed() {
-        RandomUtils.useTestSeed();
-    }
+    public static void runSpeedComparison(String configFile) throws Exception {
+        System.out.println("processing config file: " + configFile);
+        Properties prop = new Properties();
+        FileInputStream instream = new FileInputStream(configFile);
+        prop.load(instream);
 
-    @Test
-    public void speedComparison() throws Exception {
+        // load properties
+        int LgNmin = Integer.parseInt(getProperty(prop, "LgNmin")); // base 2
+        int LgNmax = Integer.parseInt(getProperty(prop, "LgNmax")); // base 2
+        int Compression = Integer.parseInt(getProperty(prop, "Compression")); // delta for t-digest
+        ScaleFunction scale = ScaleFunction.valueOf(getProperty(prop, "ScaleFunction")); // ScaleFunction for t-digest
+        String DigestStatsDir = getProperty(prop, "DigestStatsDir");
+        String FileSuffix = getProperty(prop, "FileSuffix");
+        int reqK = Integer.parseInt(getProperty(prop, "ReqK"));
+        int kllK = Integer.parseInt(getProperty(prop, "KllK"));
         
-        System.out.println("lgN;merging;tree;reqSketch");
+        Files.createDirectories(Paths.get(DigestStatsDir));DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+        LocalDateTime now = LocalDateTime.now();
+        String outName = DigestStatsDir + "speedComparison_" + dtf.format(now) + FileSuffix;
+        System.out.printf("stats file:" + outName + "\n");
+            
+        File fout = new File(outName);
+        fout.createNewFile();
+        FileWriter fwout = new FileWriter(fout);
+        fwout.write("lgN;merging;tree;reqSketch\n");
+
         Random rand = new Random();
         for (int lgN = LgNmin; lgN <= LgNmax; lgN++) {
             long N = 1l << lgN;
-            MergingDigest merging = new MergingDigest(500);
-            merging.setScaleFunction(ScaleFunction.K_2);
+            MergingDigest merging = new MergingDigest(Compression);
+            merging.setScaleFunction(scale);
             Instant startTime = Instant.now();
             for (long i = 0; i < N; i++) {
                 merging.add(rand.nextDouble());
             }
             double mergingNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
 
-            AVLTreeDigest tree = new AVLTreeDigest(500);
-            tree.setScaleFunction(ScaleFunction.K_2);
+            AVLTreeDigest tree = new AVLTreeDigest(Compression);
+            tree.setScaleFunction(scale);
             startTime = Instant.now();
             for (long i = 0; i < N; i++) {
                 tree.add(rand.nextDouble());
             }
             double treeNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
             
-            ReqSketch reqsk = new ReqSketch(4, true, null);
+            ReqSketch reqsk = new ReqSketch(reqK, true, null);
             startTime = Instant.now();
             for (long i = 0; i < N; i++) {
                 reqsk.update(rand.nextDouble());
             }
             double reqskNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
             
-            KllDoublesSketch kll = new KllDoublesSketch(100);
+            KllDoublesSketch kll = new KllDoublesSketch(kllK);
             startTime = Instant.now();
             for (long i = 0; i < N; i++) {
                 kll.update(rand.nextDouble());
             }
             double kllNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
             
-            System.out.println(String.format("%d;%.2f;%.2f;%.2f;%.2f", lgN, mergingNs, treeNs, reqskNs, kllNs));
-            System.out.flush();
+            fwout.write(String.format("%d;%.2f;%.2f;%.2f;%.2f\n", lgN, mergingNs, treeNs, reqskNs, kllNs));
+        }
+        fwout.write("\nProperties:\n");
+        for (Object key : prop.keySet()) {
+            fwout.write(key + " = " + prop.getProperty(key.toString()) + "\n");
+        }
+        fwout.close();
+    }
+    // the following does an additional trim and removes possible comment
+    public static String getProperty(Properties prop, String propName) {
+        String value = prop.getProperty(propName);
+        int inx = value.indexOf('#');
+        if (inx >= 0) {
+            value = value.substring(0, inx - 1);
+        }
+        return value.trim();
+    }
+
+    @SuppressWarnings("unused")
+    public static void main(final String[] args) throws Exception {
+        for (int j = 0; j < args.length; j++) {
+            runSpeedComparison(args[j]);
         }
     }
+
 
 
 }
