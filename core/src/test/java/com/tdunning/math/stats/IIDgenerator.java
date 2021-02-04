@@ -337,7 +337,7 @@ public class IIDgenerator {
 
         if (writeCentroids) {
             fout = new File(outName + "_centroids");
-            System.out.printf("centroids file: outName + _centroids\n");
+            System.out.printf("centroids file:" +  outName + "_centroids\n");
             fout.createNewFile();
             fwout = new FileWriter(fout);
             fwout.write(String.format("n=%d\n", size));
