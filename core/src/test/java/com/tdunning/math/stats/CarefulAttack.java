@@ -22,235 +22,16 @@ import org.junit.*;
 
 import java.lang.Math;
 import java.util.*;
+import java.io.*;
 
 import org.junit.Ignore;
 
+//import com.tdunning.math.stats.SpeedComparison.getProperty;
 
 /**
  *
  */
-//@Ignore
-public class CarefulAttackTest extends AdversarialAttackTest {
-
-    @BeforeClass
-    public static void freezeSeed() {
-        RandomUtils.useTestSeed();
-    }
-
-    @Ignore
-    public void carefulNested() throws Exception {
-        carefulNestedGen(ScaleFunction.K_3);
-    }
-
-    @Ignore
-    public void carefulNestedGen(ScaleFunction scaleFunction) throws Exception {
-
-        double EPSILON = Double.MIN_VALUE;
-
-        double delta = 500;
-        //double delta = 1000;
-
-        List<Double> data = new ArrayList<>();
-        MergingDigest digest = new MergingDigest(delta);
-        digest.setScaleFunction(scaleFunction);
-        digest.setUseAlternatingSort(false);
-
-        int initializingHalfBatchSize = (int) Math.floor(delta * 10);
-
-        // delta=500, denom=100000 seems to work okay..
-
-        double denom = 10000000d;
-        //denom *= 100;
-        double infty = (Double.MAX_VALUE) / denom; // so we can safely average
-
-        double increment = infty / initializingHalfBatchSize;
-
-        // add a glob of zeroes, aim for error there.
-        for (int j = 0; j < 5 * initializingHalfBatchSize; j++) {
-            data.add(0d);
-            digest.add(0d);
-        }
-
-        for (int i = 0; i < 2 * initializingHalfBatchSize; i++) {
-            double point = -infty;
-            for (int j = 0; j < i; j++) {
-                point += increment;
-            }
-            data.add(point);
-            digest.add(point);
-        }
-        digest.compress();
-
-        Centroid centroidToAttack = belowValue(0d, digest.centroids());
-        Centroid rightNeighbor = aboveValue(centroidToAttack.mean(), digest.centroids());
-
-        double centerOfAttack = centroidToAttack.mean();
-        double centerOfRightNeighbor = rightNeighbor.mean();
-
-        double weightToRight;
-        double weightToLeft;
-        int its = 0;
-        int weightGoal;
-        int currentDeficit;
-        int weightOfAttacked;
-
-        int currentDeficitRight;
-        int weightOfRightNeighbor;
-
-        Collections.sort(data);
-        double nextStreamValue = nextValue(centerOfAttack, data);
-
-        double previous_c;
-        double previous_y;
-
-        double maximalError = 0;
-        int indexError = 0;
-
-        while (true) {
-            its++;
-
-            previous_c = centerOfAttack;
-            previous_y = nextStreamValue;
-
-            centerOfAttack = centroidToAttack.mean();
-            weightOfAttacked = centroidToAttack.count();
-
-            centerOfRightNeighbor = rightNeighbor.mean();
-            weightOfRightNeighbor = rightNeighbor.count();
-
-            weightToRight = 0;
-            for (Centroid centroid : digest.centroids()) {
-                if (centroid.mean() > centerOfRightNeighbor) {
-                    weightToRight += centroid.count();
-                }
-            }
-
-            weightToLeft = digest.size() - weightOfAttacked - weightOfRightNeighbor - weightToRight;
-
-            Collections.sort(data);
-            nextStreamValue = nextValue(centerOfAttack, data);
-            if (!(centerOfAttack < nextStreamValue)) {
-                break;
-            }
-
-            if (its > 1) {
-                if ((previous_c > centerOfAttack)) {
-                    System.out.println(String
-                        .format("%f\n%f\n", previous_c, centerOfAttack));
-                    throw new Exception("wrongly ordered, you probably ran out of precision");
-                }
-                if (nextStreamValue > previous_y) {
-                    System.out.println(String
-                        .format("%f\n%f\n", nextStreamValue, previous_y));
-                    throw new Exception("wrongly ordered, you probably ran out of precision");
-                }
-            }
-
-            // weight of the centroid we will fabricate
-            // this is the formula for K_0
-            // we also maintain centroid to the right of the attack
-            weightGoal = (int) Math.ceil((weightToLeft + weightToRight) / ((delta / 2d) - 3d));
-
-            System.out.println(
-                "centroids exceeding goal at start: " + centroidsExceedingCount(digest.centroids(),
-                    weightGoal));
-            currentDeficit = weightGoal - weightOfAttacked;
-            assert currentDeficit >= 0;
-
-            double EPS = .001;
-            double EPS_2 = .01;
-
-            // fill up the old one
-            double point = centerOfAttack * (1d - EPS) + nextStreamValue * EPS;
-            for (int v = 0; v < currentDeficit; v++) {
-                //double point = centerOfAttack + (nextStreamValue - centerOfAttack) / 10000; // * onePlus; //no Plus Epsilon
-                digest.add(point, 1);
-                data.add(point);
-            }
-
-            // make the new one
-            double anotherPoint = centerOfAttack * (1d - EPS_2) + nextStreamValue * EPS_2;
-            digest.add(anotherPoint, 3);
-            data.add(anotherPoint);
-
-            double leftEdge = centerOfAttack * EPS + nextStreamValue * (1 - EPS);
-            for (int v = 0; v < weightGoal - 3; v++) {
-                digest.add(leftEdge, 1);
-                data.add(leftEdge);
-            }
-
-            // fill up the centroid to the right
-            currentDeficitRight = weightGoal - rightNeighbor.count();
-            assert currentDeficit >= 0;
-            //Centroid rightCentroid = aboveValue(leftEdge, digest.centroids());
-            //int deficit = weightGoal - rightCentroid.count();
-            double rightCentroidVal = rightNeighbor.mean();
-            for (int pp = 0; pp < currentDeficitRight; pp++) {
-                digest.add(rightCentroidVal);
-                data.add(rightCentroidVal);
-            }
-
-            System.out.println(String
-                .format("%s\n%s\n%f\n%f\n%f\n", centerOfAttack, point, anotherPoint, leftEdge,
-                    nextStreamValue));
-
-            digest.compress();
-
-            System.out.println(
-                "centroids exceeding goal at end: " + centroidsExceedingCount(digest.centroids(),
-                    weightGoal - 1));
-
-            double bad_point = centerOfAttack * .00000000001 + nextStreamValue * (1 - .00000000001);
-            Collections.sort(data);
-
-            System.out.println("finished iteration: " + its);
-            System.out.println("td " + digest.cdf(bad_point));
-            System.out
-                .println("truth " + countBelow(bad_point, data) / (double) data.size());
-
-            double error = Math
-                .abs(digest.cdf(bad_point) - countBelow(bad_point, data) / (double) data.size());
-
-            if (error > maximalError) {
-                maximalError = error;
-                indexError = its;
-            }
-            System.out.println("maximal error so far: " + maximalError + " on " + indexError);
-            System.out.println("num centroids: " + digest.centroids().size() + "\n");
-
-            centroidToAttack = aboveValue(centerOfAttack, digest.centroids());
-            if (centroidToAttack.mean() < centerOfAttack) {
-                System.out.println("wtf");
-            }
-            rightNeighbor = aboveValue(centroidToAttack.mean(), digest.centroids());
-        }
-        List<Double> sortedData = new ArrayList<>(data);
-        Collections.sort(sortedData);
-
-        CarefulAttackAuxiliary.writeResults((int) delta, data.size(), digest, data, sortedData,
-            "DO NOT COMPARE TO ANYTHING", DigestStatsDir, "careful_" + its,
-            true);
-
-        double bad_point = (previous_c + previous_y) / 2d;
-
-        System.out.println("td " + digest.cdf(bad_point));
-        System.out.println("truth " + countBelow(bad_point, data) / (double) data.size());
-        System.out.println("iterations" + its);
-    }
-
-    //@Test
-    public void findDiscrepancy() throws Exception {
-
-        List<Double> errors1 = carefulNestedAroundZeroK_0();
-        List<Double> errors2 = carefulNestedAroundZeroK_0();
-
-        for (int i = 0; i < errors1.size(); i++) {
-            if (Math.abs(errors1.get(i) - errors2.get(i)) > Double.MIN_VALUE) {
-                System.out.println(i + " " + errors1.get(i) + " " + errors2.get(i));
-            }
-        }
-
-    }
+public class CarefulAttack {
 
     private int weightGoal(ScaleFunction scaleFunction, double delta, double weightToLeft,
         double weightToRight, long size, double deltaMult) {
@@ -303,6 +84,45 @@ public class CarefulAttackTest extends AdversarialAttackTest {
             true, new NestedInputParams(0.000000001, 0.26, 0.0000000001, false, 1/1.48d, true, 0.18, 8),
             981198271346L, true, false, "kll");
     }
+    
+    int reqK, kllK, NumberOfPoints;
+    String DigestStatsDir, FileSuffix;
+    
+    public CarefulAttack(String configFile) throws Exception {
+        System.out.println("processing config file: " + configFile);
+        Properties prop = new Properties();
+        FileInputStream instream = new FileInputStream(configFile);
+        prop.load(instream);
+
+        // load properties
+        String DigestImpl = SpeedComparison.getProperty(prop, "DigestImpl");
+        NumberOfPoints = Integer.parseInt(
+            SpeedComparison.getProperty(prop, "NumberOfPoints")); // number of points where we probe the rank estimates // TODO not used now
+        boolean WriteCentroidData = Boolean.parseBoolean(SpeedComparison.getProperty(prop, "WriteCentroidData"));
+        boolean useAlternatingSort = Boolean.parseBoolean(SpeedComparison.getProperty(prop, "useAlternatingSort"));
+        int Compression = Integer.parseInt(SpeedComparison.getProperty(prop, "Compression")); // delta for t-digest
+        ScaleFunction scale = ScaleFunction.valueOf(SpeedComparison.getProperty(prop, "ScaleFunction")); // ScaleFunction for t-digest
+        DigestStatsDir = SpeedComparison.getProperty(prop, "DigestStatsDir");
+        FileSuffix = SpeedComparison.getProperty(prop, "FileSuffix");
+        reqK = Integer.parseInt(SpeedComparison.getProperty(prop, "ReqK"));
+        kllK = Integer.parseInt(SpeedComparison.getProperty(prop, "KllK"));
+        int iterations = Integer.parseInt(SpeedComparison.getProperty(prop, "iterations"));
+        long seed = Long.parseLong(SpeedComparison.getProperty(prop, "seed"));
+
+        carefulNestedAroundZero(scale, Compression, DigestImpl,
+            useAlternatingSort, iterations, true,
+            WriteCentroidData, new NestedInputParams(Double.parseDouble(SpeedComparison.getProperty(prop, "newCentroidNextMinusCenterCoeff")), 
+                                                     Double.parseDouble(SpeedComparison.getProperty(prop, "newCentroidNextMultiplier")),
+                                                     Double.parseDouble(SpeedComparison.getProperty(prop, "rightCentroidNudge")),
+                                                     Boolean.parseBoolean(SpeedComparison.getProperty(prop, "useConvexCombination")),
+                                                     Double.parseDouble(SpeedComparison.getProperty(prop, "deltaMult")),
+                                                     Boolean.parseBoolean(SpeedComparison.getProperty(prop, "compressBeforePositiveUpdates")),
+                                                     Double.parseDouble(SpeedComparison.getProperty(prop, "fracNegativeUpdates")),
+                                                     Double.parseDouble(SpeedComparison.getProperty(prop, "initBatchSizeMult"))),
+            seed, Boolean.parseBoolean(SpeedComparison.getProperty(prop, "CompareToSorted")),
+                  Boolean.parseBoolean(SpeedComparison.getProperty(prop, "maintainRightCentroid")),
+                  SpeedComparison.getProperty(prop, "compareTo"));
+    }
 
     private class NestedInputParams {
 
@@ -329,7 +149,6 @@ public class CarefulAttackTest extends AdversarialAttackTest {
 
     /*
     iterations - will eventually run out of heap space, this caps it
-
      */
     public List<Double> carefulNestedAroundZero(ScaleFunction scaleFunction, double delta,
         String implementation, boolean useAlternatingSort, int iterations, boolean writeResults,
@@ -341,6 +160,8 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         List<Double> data = new ArrayList<>();
         List<Double> sortedData = new ArrayList<>();
         TDigest digest = CarefulAttackAuxiliary.digest(delta, implementation, scaleFunction, useAlternatingSort, seed);
+        System.out.println(
+                "delta:\t" + delta);
 
         int initializingHalfBatchSize = (int) Math.floor(delta * params.initBatchSizeMult);
 
@@ -777,6 +598,13 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         }
         // assert sortedData.get(index) > c;
         return index;
+    }
+
+    @SuppressWarnings("unused")
+    public static void main(final String[] args) throws Exception {
+        for (int j = 0; j < args.length; j++) {
+            new CarefulAttack(args[j]);
+        }
     }
 
 }

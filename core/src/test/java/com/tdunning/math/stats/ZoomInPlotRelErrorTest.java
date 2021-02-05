@@ -102,7 +102,7 @@ public class ZoomInPlotRelErrorTest extends AdversarialAttackTest {
                 .println("processing by t-digest done for compression =" + String.valueOf(compr));
             System.out.flush();
 
-            writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
+            CarefulAttackAuxiliary.writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + "_K=" + String.valueOf(K) + "_N=" + String
                     .valueOf(N) + "_PS=" + String.valueOf(PrefixSize) + "_repeats=" + String
                     .valueOf(NumberOfRepeats) + "-stats-PP_" + String.valueOf(NumberOfPoints)
@@ -150,14 +150,14 @@ public class ZoomInPlotRelErrorTest extends AdversarialAttackTest {
             System.out.flush();
 
             if (WriteCentroidData) {
-                writeCentroidData(digest,
+                CarefulAttackAuxiliary.writeCentroidData(digest,
                     DigestStatsDir + DigestStatsFileName + "_zoominIIDitems" + "_N=" + String
                         .valueOf(N)
                         + "-centroids-PP_" + String.valueOf(NumberOfPoints)
                         + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
             }
 
-            writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
+            CarefulAttackAuxiliary.writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + "_AVL_zoominIIDitems" + (
                     NegativeNumbers ? "_wNegativeNumbers" : "_PositiveOnly") + "_N=" + String
                     .valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
@@ -200,7 +200,7 @@ public class ZoomInPlotRelErrorTest extends AdversarialAttackTest {
                 .println("processing by t-digest done for compression =" + String.valueOf(compr));
             System.out.flush();
 
-            writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
+            CarefulAttackAuxiliary.writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + "_uniformIIDitems" + "_N=" + String
                     .valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
                     + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix,
@@ -247,7 +247,7 @@ public class ZoomInPlotRelErrorTest extends AdversarialAttackTest {
                 .println("processing by t-digest done for compression =" + String.valueOf(compr));
             System.out.flush();
 
-            writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
+            CarefulAttackAuxiliary.writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + "_2DistribUniformIIDitems" + "_N=" + String
                     .valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
                     + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix,
@@ -292,7 +292,7 @@ public class ZoomInPlotRelErrorTest extends AdversarialAttackTest {
                 .println("processing by t-digest done for compression =" + String.valueOf(compr));
             System.out.flush();
 
-            writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
+            CarefulAttackAuxiliary.writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + "_2valuesIIDitems" + "_N=" + String
                     .valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
                     + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix,
@@ -342,7 +342,7 @@ public class ZoomInPlotRelErrorTest extends AdversarialAttackTest {
                 .println("processing by t-digest done for compression =" + String.valueOf(compr));
             System.out.flush();
 
-            writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
+            CarefulAttackAuxiliary.writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + "_3valuesIIDitems" + "_N=" + String
                     .valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
                     + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix,
@@ -390,7 +390,7 @@ public class ZoomInPlotRelErrorTest extends AdversarialAttackTest {
                 .println("processing by t-digest done for compression =" + String.valueOf(compr));
             System.out.flush();
 
-            writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
+            CarefulAttackAuxiliary.writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + "_clusteredIIDitems" + "_K=" + String
                     .valueOf(K) + "_N=" + String.valueOf(N) + "-stats-PP_" + String
                     .valueOf(NumberOfPoints)
@@ -435,7 +435,7 @@ public class ZoomInPlotRelErrorTest extends AdversarialAttackTest {
                 .println("processing by t-digest done for compression =" + String.valueOf(compr));
             System.out.flush();
 
-            writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
+            CarefulAttackAuxiliary.writeResults(compr, n, digest, data, sortedData, "DO NOT COMPARE TO ANYTHING", DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + "ExpDistrib" + "_lambda=" + String
                     .valueOf(lambda) + "_N=" + String.valueOf(N) + "-stats-PP_" + String
                     .valueOf(NumberOfPoints)
@@ -514,7 +514,7 @@ public class ZoomInPlotRelErrorTest extends AdversarialAttackTest {
                 .println("processing by t-digest done for compression =" + String.valueOf(compr));
             System.out.flush();
 
-            writeResultsFloat(compr, n, digest, sortedData, DigestStatsDir,
+            CarefulAttackAuxiliary.writeResultsFloat(compr, n, digest, sortedData, DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + "_Float" + "_K=" + String.valueOf(K) + "_N="
                     + String
                     .valueOf(N) + "_PS=" + String.valueOf(PrefixSize) + "_repeats=" + String
@@ -562,7 +562,7 @@ public class ZoomInPlotRelErrorTest extends AdversarialAttackTest {
                 .println("processing by t-digest done for compression =" + String.valueOf(compr));
             System.out.flush();
 
-            writeResultsFloat(compr, n, digest, sortedData, DigestStatsDir,
+            CarefulAttackAuxiliary.writeResultsFloat(compr, n, digest, sortedData, DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + "_ZoomInExp2IIDitems_minusInfty_Float"
                     + "_N=" + String.valueOf(N) + "-stats-PP_" + String.valueOf(NumberOfPoints)
                     + "_compr_" + String.valueOf(compr) + digest.scale.toString() + FileSuffix);
