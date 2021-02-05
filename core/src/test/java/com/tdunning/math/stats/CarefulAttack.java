@@ -52,38 +52,7 @@ public class CarefulAttack {
         }
     }
 
-    //@ Test  - WIP
-    public List<Double> carefulNestedAroundZeroK_3() throws Exception {
-        return carefulNestedAroundZero(ScaleFunction.K_3_NO_NORM, 100, "tree",
-            true, 44, true,
-            false, new NestedInputParams(0.001, 0.1, 0.0001, true, 0.5, false, 0.2, 10),
-            RandomUtils.getRandom().nextLong(), false, false, "reqsketch");
-    }
 
-    //@Test
-    public List<Double> carefulNestedAroundZeroK_0() throws Exception {
-        return carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",  // merging or tree
-            false, 1000, true,
-            false, new NestedInputParams(0.000000001, 0.2, 0.0000000001, false, 0.5, false, 0.2, 10),
-            RandomUtils.getRandom().nextLong(), false, true, "reqsketch");
-    }
-
-
-    @Test // resulting data files used by error curves notebook
-    public void writeCarefulNestedAroundZeroK_0() throws Exception {
-        carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",
-            false, 1000, true,
-            true, new NestedInputParams(0.0000001, 0.21, 0.0000000001, false, 0.5, false, 0.2, 10),
-            981198271346L, true, true, "kll");
-        carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",
-            true, 1000, true,
-            true, new NestedInputParams(0.0000001, 0.21, 0.0000000001, false, 0.5, false, 0.2, 10),
-            981198271346L, true, true, "kll");
-        carefulNestedAroundZero(ScaleFunction.K_0, 500, "tree",
-            false, 1300, true,
-            true, new NestedInputParams(0.000000001, 0.26, 0.0000000001, false, 1/1.48d, true, 0.18, 8),
-            981198271346L, true, false, "kll");
-    }
     
     int reqK, kllK, NumberOfPoints;
     String DigestStatsDir, FileSuffix;
