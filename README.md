@@ -19,7 +19,7 @@ The first step is to compile the whole repository using [Apache Maven](https://m
 
 Before running any of the aforementioned three experiments, we need to modify the CLASSPATH variable for Java:
 
-    $ export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes:.target/classes/org/apache/datasketches/re q/ReqSketch:../../datasketches/target/classes"
+    $ export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes:./target/classes/org/apache/datasketches/req/ReqSketch:../../datasketches/target/classes"
 Next, we run an experiment implemented as class `[Class]` (see below) with parameters specified in a configuration file using:
 
     $ java -ea -Dfile.encoding=UTF-8 com.tdunning.math.stats.[Class] [configuration files]...
@@ -35,9 +35,18 @@ We provide prepared configuration files in the `core/resources/` directory (opti
 
 Each of these tests outputs a CSV file with generated results to a specified directory (which is `data/results/` by default).
 
-PV: SHALL WE SAY MORE ABOUT PARAMETERS IN THE CONFIGURATION FILES? 
+To generate the plots in the paper, the following experiments should be run:
+- scenario 1. above with both `CarefulAttack_k_0_merging.conf` and `CarefulAttack_k_0_clustering.conf`
+- scenario 2. with:
+  - `IIDgenerator.conf` as given
+  - `IIDgenerator.conf` modified to use `Distribution=loguniform`
+  - `IIDgenerator.conf` modified to use `MaxExp=10` (keeping `Distribution=loguniform2`)
+        
+Note this can be sped up considerably by reducing the number of trials (`LgT` in `IIDgenerator.conf`).
+        
+Then from `docs/python/adversarial_plots`, run `make notebook`. Then run the entire notebok. This will both render the plots in the notebook, and save image files to `docs/python/adversarial_plots/images/`.
 
-SOMETHING ABOUT GENERATING PLOTS?
+OR TODO run the following python script... 
 
 
 ## Remarks
