@@ -130,8 +130,7 @@ public class IIDgenerator {
         //Files.createDirectories(Paths.get(InputStreamFileDir));
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
         LocalDateTime now = LocalDateTime.now();
-        String fileNamePart =
-            "_" + dtf.format(now) + "_" + Distribution + (NegativeNumbers ? "" : "_PositiveOnly")
+        String fileNamePart = "_" + Distribution + (NegativeNumbers ? "" : "_PositiveOnly")
                 + "_lgN=" + String.valueOf(LgN) + "_lgT=" + String.valueOf(LgT) + (maxExp > 0 ? "_maxExp=" + String.valueOf(maxExp) : "");
 //        String inputFilePath =
 //            InputStreamFileDir + InputStreamFileName + "_" + fileNamePart + FileSuffix;
