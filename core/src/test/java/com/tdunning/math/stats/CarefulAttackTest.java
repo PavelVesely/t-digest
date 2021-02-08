@@ -283,7 +283,8 @@ public class CarefulAttackTest extends AdversarialAttackTest {
     public List<Double> carefulNestedAroundZeroK_0() throws Exception {
         return carefulNestedAroundZero(ScaleFunction.K_0, 500, "merging",  // merging or tree
             false, 1000, true,
-            false, new NestedInputParams(0.000000001, 0.2, 0.0000000001, false, 0.5, false, 0.2, 10),
+            false,
+            new NestedInputParams(0.000000001, 0.2, 0.0000000001, false, 0.5, false, 0.2, 10),
             RandomUtils.getRandom().nextLong(), false, true, "reqsketch");
     }
 
@@ -300,7 +301,8 @@ public class CarefulAttackTest extends AdversarialAttackTest {
             981198271346L, true, true, "kll");
         carefulNestedAroundZero(ScaleFunction.K_0, 500, "tree",
             false, 1300, true,
-            true, new NestedInputParams(0.000000001, 0.26, 0.0000000001, false, 1/1.48d, true, 0.18, 8),
+            true,
+            new NestedInputParams(0.000000001, 0.26, 0.0000000001, false, 1 / 1.48d, true, 0.18, 8),
             981198271346L, true, false, "kll");
     }
 
@@ -315,7 +317,8 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         private final double fracNegativeUpdates;
         private final double initBatchSizeMult;
 
-        private NestedInputParams(double p1, double p2, double p3, boolean p4, double p5, boolean p6, double p7, double p8) {
+        private NestedInputParams(double p1, double p2, double p3, boolean p4, double p5,
+            boolean p6, double p7, double p8) {
             newCentroidNextMinusCenterCoeff = p1;
             newCentroidNextMultiplier = p2;
             rightCentroidNudge = p3;
@@ -340,7 +343,9 @@ public class CarefulAttackTest extends AdversarialAttackTest {
 
         List<Double> data = new ArrayList<>();
         List<Double> sortedData = new ArrayList<>();
-        TDigest digest = CarefulAttackAuxiliary.digest(delta, implementation, scaleFunction, useAlternatingSort, seed);
+        TDigest digest = CarefulAttackAuxiliary
+            .digest(delta, implementation, scaleFunction, useAlternatingSort,
+                writeCentroidData, seed);
 
         int initializingHalfBatchSize = (int) Math.floor(delta * params.initBatchSizeMult);
 
@@ -516,8 +521,9 @@ public class CarefulAttackTest extends AdversarialAttackTest {
                 data.add(toAdd);
                 sortedData.add(toAdd);
             }
-            if (params.compressBeforePositiveUpdates)
+            if (params.compressBeforePositiveUpdates) {
                 digest.compress();
+            }
 
             for (; v < weightGoal; v++) {
                 double toAdd = newCentroidMainValue; //+ (anotherPoint - newCentroidMainValue) * v / (double) weightGoal / 10000;
@@ -623,13 +629,14 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         String altSort =
             (implementation.equals("merging")) ? "_alt_" + String.valueOf(useAlternatingSort) : "";
         if (writeResults) {
-            CarefulAttackAuxiliary.writeResults((int) delta, data.size(), digest, data, sortedData, compareTo,
-                DigestStatsDir,
-                DigestStatsDir + String.format(
-                    "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
-                    iteration,
-                    data.size(), digest.scale.toString(), (int) delta, digest.centroidCount(),
-                    digest.byteSize(), implementation) + altSort + FileSuffix, false);
+            CarefulAttackAuxiliary
+                .writeResults((int) delta, data.size(), digest, data, sortedData, compareTo,
+                    DigestStatsDir,
+                    DigestStatsDir + String.format(
+                        "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
+                        iteration,
+                        data.size(), digest.scale.toString(), (int) delta, digest.centroidCount(),
+                        digest.byteSize(), implementation) + altSort + FileSuffix, false);
         }
         if (writeCentroidData) {
             CarefulAttackAuxiliary.writeCentroidData(digest,
@@ -642,14 +649,16 @@ public class CarefulAttackTest extends AdversarialAttackTest {
         if (compareToSorted) {
             TDigest tDigest = CarefulAttackAuxiliary.rerunOnSortedInput(digest, sortedData);
             if (writeResults) {
-                CarefulAttackAuxiliary.writeResults((int) delta, data.size(), tDigest, data, sortedData, compareTo,
-                    DigestStatsDir,
-                    DigestStatsDir + String.format(
-                        "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
-                        iteration,
-                        data.size(), tDigest.scale.toString(), (int) delta, tDigest.centroidCount(),
-                        tDigest.byteSize(), implementation) + altSort + "_sorted" + FileSuffix,
-                    false);
+                CarefulAttackAuxiliary
+                    .writeResults((int) delta, data.size(), tDigest, data, sortedData, compareTo,
+                        DigestStatsDir,
+                        DigestStatsDir + String.format(
+                            "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
+                            iteration,
+                            data.size(), tDigest.scale.toString(), (int) delta,
+                            tDigest.centroidCount(),
+                            tDigest.byteSize(), implementation) + altSort + "_sorted" + FileSuffix,
+                        false);
             }
             if (writeCentroidData) {
                 CarefulAttackAuxiliary.writeCentroidData(tDigest,
@@ -657,7 +666,7 @@ public class CarefulAttackTest extends AdversarialAttackTest {
                         "centroids_careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
                         iteration,
                         data.size(), tDigest.scale.toString(), (int) delta, tDigest.centroidCount(),
-                        tDigest.byteSize(), implementation) + altSort + "_sorted" +  FileSuffix);
+                        tDigest.byteSize(), implementation) + altSort + "_sorted" + FileSuffix);
             }
         }
         return errors;

@@ -17,14 +17,9 @@
 
 package com.tdunning.math.stats;
 
-import org.apache.mahout.common.RandomUtils;
-import org.junit.*;
-
 import java.lang.Math;
 import java.util.*;
 import java.io.*;
-
-import org.junit.Ignore;
 
 //import com.tdunning.math.stats.SpeedComparison.getProperty;
 
@@ -53,10 +48,9 @@ public class CarefulAttack {
     }
 
 
-    
     int reqK, kllK, NumberOfPoints;
     String DigestStatsDir, FileSuffix;
-    
+
     public CarefulAttack(String configFile) throws Exception {
         System.out.println("processing config file: " + configFile);
         Properties prop = new Properties();
@@ -66,11 +60,16 @@ public class CarefulAttack {
         // load properties
         String DigestImpl = SpeedComparison.getProperty(prop, "DigestImpl");
         NumberOfPoints = Integer.parseInt(
-            SpeedComparison.getProperty(prop, "NumberOfPoints")); // number of points where we probe the rank estimates // TODO not used now
-        boolean WriteCentroidData = Boolean.parseBoolean(SpeedComparison.getProperty(prop, "WriteCentroidData"));
-        boolean useAlternatingSort = Boolean.parseBoolean(SpeedComparison.getProperty(prop, "useAlternatingSort"));
-        int Compression = Integer.parseInt(SpeedComparison.getProperty(prop, "Compression")); // delta for t-digest
-        ScaleFunction scale = ScaleFunction.valueOf(SpeedComparison.getProperty(prop, "ScaleFunction")); // ScaleFunction for t-digest
+            SpeedComparison.getProperty(prop,
+                "NumberOfPoints")); // number of points where we probe the rank estimates // TODO not used now
+        boolean WriteCentroidData = Boolean
+            .parseBoolean(SpeedComparison.getProperty(prop, "WriteCentroidData"));
+        boolean useAlternatingSort = Boolean
+            .parseBoolean(SpeedComparison.getProperty(prop, "useAlternatingSort"));
+        int Compression = Integer
+            .parseInt(SpeedComparison.getProperty(prop, "Compression")); // delta for t-digest
+        ScaleFunction scale = ScaleFunction.valueOf(
+            SpeedComparison.getProperty(prop, "ScaleFunction")); // ScaleFunction for t-digest
         DigestStatsDir = SpeedComparison.getProperty(prop, "DigestStatsDir");
         FileSuffix = SpeedComparison.getProperty(prop, "FileSuffix");
         reqK = Integer.parseInt(SpeedComparison.getProperty(prop, "ReqK"));
@@ -80,17 +79,19 @@ public class CarefulAttack {
 
         carefulNestedAroundZero(scale, Compression, DigestImpl,
             useAlternatingSort, iterations, true,
-            WriteCentroidData, new NestedInputParams(Double.parseDouble(SpeedComparison.getProperty(prop, "newCentroidNextMinusCenterCoeff")), 
-                                                     Double.parseDouble(SpeedComparison.getProperty(prop, "newCentroidNextMultiplier")),
-                                                     Double.parseDouble(SpeedComparison.getProperty(prop, "rightCentroidNudge")),
-                                                     Boolean.parseBoolean(SpeedComparison.getProperty(prop, "useConvexCombination")),
-                                                     Double.parseDouble(SpeedComparison.getProperty(prop, "deltaMult")),
-                                                     Boolean.parseBoolean(SpeedComparison.getProperty(prop, "compressBeforePositiveUpdates")),
-                                                     Double.parseDouble(SpeedComparison.getProperty(prop, "fracNegativeUpdates")),
-                                                     Double.parseDouble(SpeedComparison.getProperty(prop, "initBatchSizeMult"))),
+            WriteCentroidData, new NestedInputParams(Double
+                .parseDouble(SpeedComparison.getProperty(prop, "newCentroidNextMinusCenterCoeff")),
+                Double.parseDouble(SpeedComparison.getProperty(prop, "newCentroidNextMultiplier")),
+                Double.parseDouble(SpeedComparison.getProperty(prop, "rightCentroidNudge")),
+                Boolean.parseBoolean(SpeedComparison.getProperty(prop, "useConvexCombination")),
+                Double.parseDouble(SpeedComparison.getProperty(prop, "deltaMult")),
+                Boolean.parseBoolean(
+                    SpeedComparison.getProperty(prop, "compressBeforePositiveUpdates")),
+                Double.parseDouble(SpeedComparison.getProperty(prop, "fracNegativeUpdates")),
+                Double.parseDouble(SpeedComparison.getProperty(prop, "initBatchSizeMult"))),
             seed, Boolean.parseBoolean(SpeedComparison.getProperty(prop, "CompareToSorted")),
-                  Boolean.parseBoolean(SpeedComparison.getProperty(prop, "maintainRightCentroid")),
-                  SpeedComparison.getProperty(prop, "compareTo"));
+            Boolean.parseBoolean(SpeedComparison.getProperty(prop, "maintainRightCentroid")),
+            SpeedComparison.getProperty(prop, "compareTo"));
     }
 
     private class NestedInputParams {
@@ -104,7 +105,8 @@ public class CarefulAttack {
         private final double fracNegativeUpdates;
         private final double initBatchSizeMult;
 
-        private NestedInputParams(double p1, double p2, double p3, boolean p4, double p5, boolean p6, double p7, double p8) {
+        private NestedInputParams(double p1, double p2, double p3, boolean p4, double p5,
+            boolean p6, double p7, double p8) {
             newCentroidNextMinusCenterCoeff = p1;
             newCentroidNextMultiplier = p2;
             rightCentroidNudge = p3;
@@ -128,9 +130,11 @@ public class CarefulAttack {
 
         List<Double> data = new ArrayList<>();
         List<Double> sortedData = new ArrayList<>();
-        TDigest digest = CarefulAttackAuxiliary.digest(delta, implementation, scaleFunction, useAlternatingSort, seed);
+        TDigest digest = CarefulAttackAuxiliary
+            .digest(delta, implementation, scaleFunction, useAlternatingSort,
+                writeCentroidData, seed);
         System.out.println(
-                "delta:\t" + delta);
+            "delta:\t" + delta);
 
         int initializingHalfBatchSize = (int) Math.floor(delta * params.initBatchSizeMult);
 
@@ -306,8 +310,9 @@ public class CarefulAttack {
                 data.add(toAdd);
                 sortedData.add(toAdd);
             }
-            if (params.compressBeforePositiveUpdates)
+            if (params.compressBeforePositiveUpdates) {
                 digest.compress();
+            }
 
             for (; v < weightGoal; v++) {
                 double toAdd = newCentroidMainValue; //+ (anotherPoint - newCentroidMainValue) * v / (double) weightGoal / 10000;
@@ -413,13 +418,14 @@ public class CarefulAttack {
         String altSort =
             (implementation.equals("merging")) ? "_alt_" + String.valueOf(useAlternatingSort) : "";
         if (writeResults) {
-            CarefulAttackAuxiliary.writeResults((int) delta, data.size(), digest, data, sortedData, compareTo,
-                DigestStatsDir,
-                DigestStatsDir + String.format(
-                    "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
-                    iteration,
-                    data.size(), digest.scale.toString(), (int) delta, digest.centroidCount(),
-                    digest.byteSize(), implementation) + altSort + FileSuffix, false);
+            CarefulAttackAuxiliary
+                .writeResults((int) delta, data.size(), digest, data, sortedData, compareTo,
+                    DigestStatsDir,
+                    DigestStatsDir + String.format(
+                        "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
+                        iteration,
+                        data.size(), digest.scale.toString(), (int) delta, digest.centroidCount(),
+                        digest.byteSize(), implementation) + altSort + FileSuffix, false);
         }
         if (writeCentroidData) {
             CarefulAttackAuxiliary.writeCentroidData(digest,
@@ -432,14 +438,16 @@ public class CarefulAttack {
         if (compareToSorted) {
             TDigest tDigest = CarefulAttackAuxiliary.rerunOnSortedInput(digest, sortedData);
             if (writeResults) {
-                CarefulAttackAuxiliary.writeResults((int) delta, data.size(), tDigest, data, sortedData, compareTo,
-                    DigestStatsDir,
-                    DigestStatsDir + String.format(
-                        "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
-                        iteration,
-                        data.size(), tDigest.scale.toString(), (int) delta, tDigest.centroidCount(),
-                        tDigest.byteSize(), implementation) + altSort + "_sorted" + FileSuffix,
-                    false);
+                CarefulAttackAuxiliary
+                    .writeResults((int) delta, data.size(), tDigest, data, sortedData, compareTo,
+                        DigestStatsDir,
+                        DigestStatsDir + String.format(
+                            "careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
+                            iteration,
+                            data.size(), tDigest.scale.toString(), (int) delta,
+                            tDigest.centroidCount(),
+                            tDigest.byteSize(), implementation) + altSort + "_sorted" + FileSuffix,
+                        false);
             }
             if (writeCentroidData) {
                 CarefulAttackAuxiliary.writeCentroidData(tDigest,
@@ -447,7 +455,7 @@ public class CarefulAttack {
                         "centroids_careful_iterations=%d_samples=%d_scalefunc=%s_delta=%d_centroids=%d_sizeBytes=%d_impl=%s",
                         iteration,
                         data.size(), tDigest.scale.toString(), (int) delta, tDigest.centroidCount(),
-                        tDigest.byteSize(), implementation) + altSort + "_sorted" +  FileSuffix);
+                        tDigest.byteSize(), implementation) + altSort + "_sorted" + FileSuffix);
             }
         }
         return errors;

@@ -13,13 +13,13 @@ This repository is a clone of the [Ted Dunning's repository for t-digest](https:
 
 ## Running experiments
 
-The first step is to compile the whole repository using [Apache Maven](https://maven.apache.org/) in the `core/` directory (possibly, one can skip running the unit tests using `-DskipTests=true`):
+The first step is to compile the whole repository using [Apache Maven](https://maven.apache.org/) in the `core/` directory via, for example (possibly, one can skip running the unit tests using `-DskipTests=true`):
 
-    $ mvn test
+    $ mvn clean install
 
 Before running any of the aforementioned three experiments, we need to modify the CLASSPATH variable for Java:
 
-    $ export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes:./target/classes/org/apache/datasketches/req/ReqSketch:../../datasketches/target/classes"
+    $ export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes:./target/classes/org/apache/datasketches/req/ReqSketch:../../datasketches/target/classes:../../../.m2/repository/org/apache/datasketches/datasketches-java/1.3.0-incubating/datasketches-java-1.3.0-incubating.jar"
 Next, we run an experiment implemented as class `[Class]` (see below) with parameters specified in a configuration file using:
 
     $ java -ea -Dfile.encoding=UTF-8 com.tdunning.math.stats.[Class] [configuration files]...
@@ -45,10 +45,20 @@ To generate the plots and tables in the paper, the following experiments should 
         
 Note this can be sped up considerably by reducing the number of trials (parameter `LgT`).
 
-Then from `docs/python/adversarial_plots`, run `make notebook`. Then run the entire notebok. This will both render the plots in the notebook, and save image files to `docs/python/adversarial_plots/images/`.
+Then from `docs/python/adversarial_plots`, run `make install` and then `make notebook`. Then run the entire `error_plots` notebook. This will both render the plots in the notebook, and save image files to `docs/python/adversarial_plots/images/`.
 
-OR TODO run the following python script... 
+## Additional plots
 
+As the weak ordering of centroids plays a role in the $t$-digest error, we provide some plots to understand the nature of the weak ordering in the various scenarios.
+
+Run scenario 1. (the careful attacks) with `WriteCentroidData=true, CompareToSorted=true`. (This will overwrite outputs with identical files if you have already run the experiment with the given configuration.)
+Run scenario 2. (the IID case) with `writeCentroidData=true, DigestImpl=`.
+
+These generate outputs which are used by both the `overlap_computation` notebook and a cell in the `error_plots` notebook demonstrating the (theoretically clear) result that the carefully constructed input is not difficult for the t-digest when presented in sorted order.
+
+The "local overlap" plots do not appear in the paper.
+
+(TODO: script versions of notebooks)
 
 ## Remarks
 

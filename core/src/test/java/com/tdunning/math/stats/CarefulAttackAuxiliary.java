@@ -17,9 +17,6 @@
 
 package com.tdunning.math.stats;
 
-import org.apache.mahout.common.RandomUtils;
-import org.junit.*;
-
 import java.io.*;
 import java.lang.Math;
 import java.nio.file.Files;
@@ -29,22 +26,21 @@ import java.util.*;
 import com.tdunning.math.stats.datasketches.req.ReqSketch;
 import com.tdunning.math.stats.datasketches.kll.KllDoublesSketch;
 
-import org.junit.Ignore;
-
 /**
  *
  */
 public class CarefulAttackAuxiliary {
-    
+
     protected static final int NumberOfPoints = 200; // number of points where we probe the rank estimates
     protected static final int NumberOfTrials = 1000; // number of executions of ReqSketch/KLL on data
     protected static final int reqK = 4; // accuracy param. of ReqSketch
     protected static final int kllK = 100; // accuracy param. of KLL
     protected static final String DigestStatsDir = "../../../data/results/";
     protected static final String FileSuffix = ".csv";
-    
-    protected static TDigest digest(final double delta, String implementation, ScaleFunction scaleFunction,
-        boolean useAlternatingSort, long seed) {
+
+    protected static TDigest digest(final double delta, String implementation,
+        ScaleFunction scaleFunction,
+        boolean useAlternatingSort, boolean recordAllData, long seed) {
         TDigest digest;
         switch (implementation.toLowerCase()) {
             case "merging":
@@ -63,12 +59,16 @@ public class CarefulAttackAuxiliary {
         } catch (IllegalArgumentException e) {
             digest.setUnnormalizedScaleFunction(scaleFunction);
         }
+        if (recordAllData) {
+            digest.recordAllData();
+        }
         return digest;
     }
 
     // compareTo should be ReqSketch or KLL
     protected static void writeResults(int compr, int size, TDigest digest,
-        List<Double> data, List<Double> sortedData, String compareTo, String digestStatsDir, String outName, boolean writeCentroids)
+        List<Double> data, List<Double> sortedData, String compareTo, String digestStatsDir,
+        String outName, boolean writeCentroids)
         throws
         IOException, Exception {
         Files.createDirectories(Paths.get(digestStatsDir));
@@ -86,20 +86,23 @@ public class CarefulAttackAuxiliary {
             errorKlls = runKllOnData(data, sortedData);
         }
         //else System.out.printf("nothing to compare to: '" + compareTo + "'\n"); 
-        
+
         System.out.printf("\n");
         System.out.printf(String.format("n=%d\n", size));
         System.out.printf(String.format("scale func. = %s\n", digest.scale.toString()));
         System.out.printf(String.format("delta = %d\n", compr));
         System.out.printf(String.format("# of centroids = %d\n", digest.centroids().size()));
         System.out.printf(String.format("size in bytes = %d\n", digest.byteSize()));
-        
+
         System.out.printf("computing errors\n");
         //System.out.flush();
-        if (errorKlls == null)
+        if (errorKlls == null) {
             fwout.write("true quantile;true rank;est. rank;rel. error;abs. error;item\n");
-        else
-            fwout.write(String.format("true quantile;TD abs. error;%s -2SD error; %s +2SD error;item\n", compareTo, compareTo));
+        } else {
+            fwout.write(String
+                .format("true quantile;TD abs. error;%s -2SD error; %s +2SD error;item\n",
+                    compareTo, compareTo));
+        }
         for (int t = 0; t <= NumberOfPoints; t++) {
             //THE FOLLOWING IS EXTREMELY SLOW: Dist.cdf(item, sortedData);
             int rTrue = (int) Math.ceil(t / (float) NumberOfPoints * size) + 1;
@@ -127,15 +130,16 @@ public class CarefulAttackAuxiliary {
                 relErr = Math.abs(rTrueMax - rEst) / rTrue;
                 addErr = (rEst - rTrueMax) / size;
             }
-            if (errorKlls == null)
+            if (errorKlls == null) {
                 fwout.write(String
-                        .format("%.6f;%d;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, (int) rTrue, rEst,
-                                relErr, addErr, String.valueOf(item)));
-            else {
+                    .format("%.6f;%d;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, (int) rTrue, rEst,
+                        relErr, addErr, String.valueOf(item)));
+            } else {
                 double addErrRSM2SD = errorKlls[t].getQuantile(IIDgenerator.M2SD);
                 double addErrRSP2SD = errorKlls[t].getQuantile(IIDgenerator.P2SD);
                 fwout.write(String
-                        .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErr, addErrRSM2SD, addErrRSP2SD, String.valueOf(item)));
+                    .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErr, addErrRSM2SD,
+                        addErrRSP2SD, String.valueOf(item)));
             }
         }
 
@@ -155,9 +159,11 @@ public class CarefulAttackAuxiliary {
         System.out.flush();
 
     }
-    
-    protected static KllDoublesSketch[] runReqSketchOnData(List<Double> data, List<Double> sortedData) throws Exception {
-        KllDoublesSketch[] errorKlls = new KllDoublesSketch[NumberOfPoints + 1]; // TODO use t-digest or something else?
+
+    protected static KllDoublesSketch[] runReqSketchOnData(List<Double> data,
+        List<Double> sortedData) throws Exception {
+        KllDoublesSketch[] errorKlls = new KllDoublesSketch[NumberOfPoints
+            + 1]; // TODO use t-digest or something else?
         for (int t = 0; t <= NumberOfPoints; t++) {
             errorKlls[t] = new KllDoublesSketch(200); // we do not need extreme quantiles
         }
@@ -184,7 +190,7 @@ public class CarefulAttackAuxiliary {
                 }
                 while (rTrueMax < sortedData.size() && item == sortedData.get(rTrueMax)) {
                     rTrueMax++;
-                }                
+                }
                 // ReqSketch error
                 double rEstRS = reqsk.getRank(item) * N;
                 double addErrRS = 0;
@@ -197,12 +203,15 @@ public class CarefulAttackAuxiliary {
                 errorKlls[t].update(addErrRS);
             }
         }
-        System.out.printf(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(), reqsk.getSerializationBytes()));
+        System.out.printf(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(),
+            reqsk.getSerializationBytes()));
         return errorKlls;
     }
-    
-    protected static KllDoublesSketch[] runKllOnData(List<Double> data, List<Double> sortedData) throws Exception {
-        KllDoublesSketch[] errorKlls = new KllDoublesSketch[NumberOfPoints + 1]; // TODO use t-digest or something else?
+
+    protected static KllDoublesSketch[] runKllOnData(List<Double> data, List<Double> sortedData)
+        throws Exception {
+        KllDoublesSketch[] errorKlls = new KllDoublesSketch[NumberOfPoints
+            + 1]; // TODO use t-digest or something else?
         for (int t = 0; t <= NumberOfPoints; t++) {
             errorKlls[t] = new KllDoublesSketch(200);
         }
@@ -228,7 +237,7 @@ public class CarefulAttackAuxiliary {
                 }
                 while (rTrueMax < sortedData.size() && item == sortedData.get(rTrueMax)) {
                     rTrueMax++;
-                }                
+                }
                 // KLL error
                 double rEstRS = kll.getRank(item) * N;
                 double addErrRS = 0;
@@ -241,7 +250,8 @@ public class CarefulAttackAuxiliary {
                 errorKlls[t].update(addErrRS);
             }
         }
-        System.out.printf(String.format("KLL w/ k=%d size in bytes = %d\n", kll.getK(), kll.getSerializedSizeBytes()));
+        System.out.printf(String
+            .format("KLL w/ k=%d size in bytes = %d\n", kll.getK(), kll.getSerializedSizeBytes()));
         return errorKlls;
     }
 
@@ -325,15 +335,17 @@ public class CarefulAttackAuxiliary {
         fwout.close();
         System.out.flush();
     }
-    
-    protected static TDigest rerunOnSortedInput(TDigest digest, List<Double> sortedData) throws Exception {
+
+    protected static TDigest rerunOnSortedInput(TDigest digest, List<Double> sortedData)
+        throws Exception {
 
         TDigest freshDigest;
 
         double delta = digest.compression();
         if (digest instanceof MergingDigest) {
             freshDigest = new MergingDigest(delta);
-            ((MergingDigest) freshDigest).setUseAlternatingSort(((MergingDigest) digest).useAlternatingSort);
+            ((MergingDigest) freshDigest)
+                .setUseAlternatingSort(((MergingDigest) digest).useAlternatingSort);
         } else if (digest instanceof AVLTreeDigest) {
             freshDigest = new AVLTreeDigest(delta);
         } else {
@@ -342,13 +354,17 @@ public class CarefulAttackAuxiliary {
 
         freshDigest.setScaleFunction(digest.scale);
 
+        if (digest.isRecording()) {
+            freshDigest.recordAllData();
+        }
+
         for (double item : sortedData) {
             freshDigest.add(item);
         }
         freshDigest.compress();
 
         return freshDigest;
-        
+
     }
 
 }
