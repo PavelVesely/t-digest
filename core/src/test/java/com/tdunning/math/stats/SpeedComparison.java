@@ -65,19 +65,22 @@ public class SpeedComparison {
         String FileSuffix = getProperty(prop, "FileSuffix");
         int reqK = Integer.parseInt(getProperty(prop, "ReqK"));
         int kllK = Integer.parseInt(getProperty(prop, "KllK"));
+        int reqKmax = Integer.parseInt(getProperty(prop, "ReqKmax")); // if reqKmax > reqK, try all even values of k in [reqK, reqKmax] on input of size 2^{lgNmax}
+        
         
         Files.createDirectories(Paths.get(DigestStatsDir));DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
-        LocalDateTime now = LocalDateTime.now();
-        String outName = DigestStatsDir + "speedComparison_" + dtf.format(now) + FileSuffix;
+        //LocalDateTime now = LocalDateTime.now();
+        String outName = DigestStatsDir + "speedComparison_LgNmin=" + LgNmin + "_LgNmax=" + LgNmax
+                + "_Compr=" + Compression + "_Scale=" + scale + "_ReqK=" + reqK + FileSuffix;
         System.out.printf("stats file:" + outName + "\n");
             
         File fout = new File(outName);
         fout.createNewFile();
         FileWriter fwout = new FileWriter(fout);
-        fwout.write("lgN;merging;tree;reqSketch\n");
+        fwout.write("lgN;merging;clustering;ReqSketch;KLL\n");
 
         Random rand = new Random();
-        for (int lgN = LgNmin; lgN <= LgNmax; lgN++) {
+        for (int lgN = LgNmin - 1; lgN <= LgNmax; lgN++) { // starting from lgN = LgNmin - 1 as the first iteration is somewhat slower for some reason
             long N = 1l << lgN;
             MergingDigest merging = new MergingDigest(Compression);
             merging.setScaleFunction(scale);
@@ -102,6 +105,14 @@ public class SpeedComparison {
             }
             double reqskNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
             
+            ReqSketch reqskLazy = new ReqSketch(reqK, true, null);
+            reqskLazy.setFullLaziness(true);
+            startTime = Instant.now();
+            for (long i = 0; i < N; i++) {
+                reqskLazy.update(rand.nextDouble());
+            }
+            double reqskLazyNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
+            
             KllDoublesSketch kll = new KllDoublesSketch(kllK);
             startTime = Instant.now();
             for (long i = 0; i < N; i++) {
@@ -109,13 +120,46 @@ public class SpeedComparison {
             }
             double kllNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
             
-            fwout.write(String.format("%d;%.2f;%.2f;%.2f;%.2f\n", lgN, mergingNs, treeNs, reqskNs, kllNs));
-        }
-        fwout.write("\nProperties:\n");
-        for (Object key : prop.keySet()) {
-            fwout.write(key + " = " + prop.getProperty(key.toString()) + "\n");
+            if (lgN >= LgNmin)
+                fwout.write(String.format("%d;%.2f;%.2f;%.2f;%.2f\n", lgN, mergingNs, treeNs, reqskNs, kllNs));
         }
         fwout.close();
+        if (reqKmax > reqK) {
+            outName = DigestStatsDir + "speedComparison-laziness_LgNmax=" + LgNmax
+                   + "_ReqK=" + reqK+ "_ReqKmax=" + reqKmax + FileSuffix;
+            fout = new File(outName);
+            fout.createNewFile();
+            fwout = new FileWriter(fout);
+            fwout.write("\nReqSketch:\n");
+            fwout.write("k;Partial laziness;Full laziness:\n");
+            for (int k = reqK; k <= reqKmax; k += 2) {
+                long N = 1l << LgNmax;
+                ReqSketch reqsk = new ReqSketch(k, true, null);
+                Instant startTime = Instant.now();
+                for (long i = 0; i < N; i++) {
+                    reqsk.update(rand.nextDouble());
+                }
+                double reqskNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
+                
+                ReqSketch reqskLazy = new ReqSketch(k, true, null);
+                reqskLazy.setFullLaziness(true);
+                startTime = Instant.now();
+                for (long i = 0; i < N; i++) {
+                    reqskLazy.update(rand.nextDouble());
+                }
+                double reqskLazyNs = Duration.between(startTime, Instant.now()).toNanos() / (double)N;
+                
+                fwout.write(String.format("%d;%.2f;%.2f\n", k, reqskNs, reqskLazyNs));
+            }
+            fwout.close();
+        }
+        
+        
+        //fwout.write("\nProperties:\n");
+        //for (Object key : prop.keySet()) {
+        //    fwout.write(key + " = " + prop.getProperty(key.toString()) + "\n");
+        //}
+        //fwout.close();
     }
     // the following does an additional trim and removes possible comment
     public static String getProperty(Properties prop, String propName) {

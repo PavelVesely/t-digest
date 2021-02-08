@@ -94,6 +94,8 @@ public class ReqSketch extends BaseReqSketch {
   private List<ReqCompactor> compactors = new ArrayList<>();
   private ReqDebug reqDebug = null; //user config, default: null, can be set after construction.
   private final CompactorReturn cReturn = new CompactorReturn(); //used in compress()
+  
+  private boolean fullLaziness = false; // for testing partial laziness in compression
 
   /*
   /**
@@ -215,7 +217,7 @@ public class ReqSketch extends BaseReqSketch {
         compactors.get(h + 1).getBuffer().mergeSortIn(promoted);
         retItems += cReturn.deltaRetItems;
         maxNomSize += cReturn.deltaNomSize;
-        //we specifically decided not to do lazy compression.
+        if (fullLaziness && retItems <= maxNomSize) break;
       }
     }
     aux = null;
@@ -577,6 +579,10 @@ public class ReqSketch extends BaseReqSketch {
 
   void setRetainedItems(final int retItems) {
     this.retItems = retItems;
+  }
+  
+  public void setFullLaziness(final boolean fullLaziness) {
+    this.fullLaziness = fullLaziness;
   }
 
   /**
