@@ -120,9 +120,9 @@ public class IIDgenerator {
         FileSuffix = getProperty("FileSuffix");
         reqK = Integer.parseInt(getProperty("ReqK"));
         maxExp = Integer.parseInt(getProperty("MaxExp"));
-        
 
-        if (DigestImpl.trim().length() > 0 && !DigestImpl.equals("AVLTree") && !DigestImpl.equals("Merging")) {
+        if (DigestImpl.trim().length() > 0 && !DigestImpl.equals("AVLTree") && !DigestImpl
+            .equals("Merging")) {
             throw new Exception("unknown digest implementation: '" + DigestImpl + "'");
         }
 
@@ -131,7 +131,8 @@ public class IIDgenerator {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
         LocalDateTime now = LocalDateTime.now();
         String fileNamePart = "_" + Distribution + (NegativeNumbers ? "" : "_PositiveOnly")
-                + "_lgN=" + String.valueOf(LgN) + "_lgT=" + String.valueOf(LgT) + (maxExp > 0 ? "_maxExp=" + String.valueOf(maxExp) : "");
+            + "_lgN=" + String.valueOf(LgN) + "_lgT=" + String.valueOf(LgT) + (maxExp > 0 ?
+            "_maxExp=" + String.valueOf(maxExp) : "");
 //        String inputFilePath =
 //            InputStreamFileDir + InputStreamFileName + "_" + fileNamePart + FileSuffix;
 //        PrintWriter w = new PrintWriter(inputFilePath);
@@ -148,8 +149,9 @@ public class IIDgenerator {
         }
 
         maxExpBase10 = (int) (Math.log(Double.MAX_VALUE / N) / Math.log(10));
-        if (maxExp == 0)
-            maxExp = maxExpBase10; 
+        if (maxExp == 0) {
+            maxExp = maxExpBase10;
+        }
 
 //        for (n = 0; n < N; n++) {
 //            double item = generateItem();
@@ -173,8 +175,10 @@ public class IIDgenerator {
             if (DigestImpl.equals("Merging") || DigestImpl.trim().length() == 0) {
                 merging = new MergingDigest(Compression);
                 merging.setScaleFunction(scale);
-                if (scale == ScaleFunction.K_2_GLUED || scale == ScaleFunction.K_3_GLUED)
-                    merging.setUseAlternatingSort(false); // fixing an issue with asymmetric scale functions (too few centroid in the end)
+                if (scale == ScaleFunction.K_2_GLUED || scale == ScaleFunction.K_3_GLUED) {
+                    merging.setUseAlternatingSort(
+                        false); // fixing an issue with asymmetric scale functions (too few centroid in the end)
+                }
             }
             if (DigestImpl.equals("AVLTree") || DigestImpl.trim().length() == 0) {
                 clustering = new AVLTreeDigest(Compression);
@@ -190,17 +194,21 @@ public class IIDgenerator {
                 double item = generateItem();
                 sortedData.add(item);
                 //if (trial == T-1) data.add(item);
-                if (merging != null)
+                if (merging != null) {
                     merging.add(item);
-                if (clustering != null)
+                }
+                if (clustering != null) {
                     clustering.add(item);
+                }
                 reqsk.update(item);
             }
             Collections.sort(sortedData);
-            if (merging != null)
+            if (merging != null) {
                 merging.compress();
-            if (clustering != null)
+            }
+            if (clustering != null) {
                 clustering.compress();
+            }
             reqsk.compress();
             // extract error from t-digest
             for (int t = 0; t <= NumberOfPoints; t++) {
@@ -235,7 +243,7 @@ public class IIDgenerator {
                     }
                     errorKllsMerging[t].update(addErrM);
                 }
-                
+
                 // clustering error
                 if (clustering != null) {
                     double rEstM = clustering.cdf(item) * N + 0.5;
@@ -251,7 +259,7 @@ public class IIDgenerator {
                     }
                     errorKllsClustering[t].update(addErrM);
                 }
-                
+
                 // ReqSketch error
                 double rEstRS = reqsk.getRank(item) * N;
                 double addErrRS = 0;
@@ -274,18 +282,19 @@ public class IIDgenerator {
         {
             writeCentroidData(merging, DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + fileNamePart + "_merging_compr="
-                + String.valueOf(Compression) + "_" + scale.toString()
+                    + String.valueOf(Compression) + "_" + scale.toString()
                     + FileSuffix);
         }
         if (WriteCentroidData && clustering != null) // from the last trial
         {
             writeCentroidData(clustering, DigestStatsDir,
                 DigestStatsDir + DigestStatsFileName + fileNamePart + "_clustering_compr="
-                + String.valueOf(Compression) + "_" + scale.toString()
+                    + String.valueOf(Compression) + "_" + scale.toString()
                     + FileSuffix);
         }
 
-        writeResults(Compression, n, NumberOfPoints, prop, merging, clustering, reqsk, errorKllsMerging, errorKllsClustering, errorKllsRS, sortedData,
+        writeResults(Compression, n, NumberOfPoints, prop, merging, clustering, reqsk,
+            errorKllsMerging, errorKllsClustering, errorKllsRS, sortedData,
             startTime, DigestStatsDir,
             DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl
                 + "_compr=" + String.valueOf(Compression) + "_" + scale.toString()
@@ -337,12 +346,15 @@ public class IIDgenerator {
 
 
     public static void writeResults(int compr, int size, int numPoints, Properties prop,
-        MergingDigest merging, AVLTreeDigest clustering, ReqSketch reqsk, KllDoublesSketch[] errorKllsMerging, KllDoublesSketch[] errorKllsClustering, KllDoublesSketch[] errorKllsRS,
-        List<Double> sortedData, Instant startTime, String digestStatsDir, String outName, boolean writeCentroids) throws
+        MergingDigest merging, AVLTreeDigest clustering, ReqSketch reqsk,
+        KllDoublesSketch[] errorKllsMerging, KllDoublesSketch[] errorKllsClustering,
+        KllDoublesSketch[] errorKllsRS,
+        List<Double> sortedData, Instant startTime, String digestStatsDir, String outName,
+        boolean writeCentroids) throws
         IOException {
         Files.createDirectories(Paths.get(digestStatsDir));
         System.out.printf("stats file:" + outName + "\n");
-            
+
         File fout = new File(outName);
         fout.createNewFile();
         FileWriter fwout = new FileWriter(fout);
@@ -351,8 +363,9 @@ public class IIDgenerator {
         //System.out.flush();
 
         fwout.write(
-            "true quantile;" + (merging != null ? "Merging;" : "") + (clustering != null ? "Clustering;" : "") + "ReqSketch -2SD;ReqSketch +2SD;item\n");
-            //"true quantile;t-digest -2SD error;TD median error;TD +2SD error;Req -2SD error;Req median error;Req +2SD error;item\n");
+            "true quantile;" + (merging != null ? "Merging;" : "") + (clustering != null
+                ? "Clustering;" : "") + "ReqSketch -2SD;ReqSketch +2SD;item\n");
+        //"true quantile;t-digest -2SD error;TD median error;TD +2SD error;Req -2SD error;Req median error;Req +2SD error;item\n");
         for (int t = 0; t <= numPoints; t++) {
             int rTrue = (int) Math.ceil(t / (float) numPoints * size) + 1;
             if (rTrue > size) {
@@ -362,31 +375,37 @@ public class IIDgenerator {
             //double addErrTDM2SD = errorKllsTD[t].getQuantile(M2SD);
             //double addErrTDP2SD = errorKllsTD[t].getQuantile(P2SD);
             double addErrMerging = merging != null ? errorKllsMerging[t].getQuantile(0.5) : 0;
-            double addErrClustering = clustering != null ? errorKllsClustering[t].getQuantile(0.5) : 0;
+            double addErrClustering =
+                clustering != null ? errorKllsClustering[t].getQuantile(0.5) : 0;
             double addErrRSM2SD = errorKllsRS[t].getQuantile(M2SD);
             double addErrRSP2SD = errorKllsRS[t].getQuantile(P2SD);
             //double addErrRSMed = errorKllsRS[t].getQuantile(0.5);
 
             //relErr = Math.abs(rTrueMax - rEst) / (size - rTrue + 1);
-            if (merging != null && clustering != null)
+            if (merging != null && clustering != null) {
                 fwout.write(String
-                        .format("%.6f;%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrMerging, addErrClustering, addErrRSM2SD, 
-                                addErrRSP2SD, String.valueOf(item)));
-            if (merging != null && clustering == null)
+                    .format("%.6f;%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrMerging,
+                        addErrClustering, addErrRSM2SD,
+                        addErrRSP2SD, String.valueOf(item)));
+            }
+            if (merging != null && clustering == null) {
                 fwout.write(String
-                        .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrMerging, addErrRSM2SD, 
-                                addErrRSP2SD, String.valueOf(item)));
-            if (merging == null && clustering != null)
+                    .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrMerging,
+                        addErrRSM2SD,
+                        addErrRSP2SD, String.valueOf(item)));
+            }
+            if (merging == null && clustering != null) {
                 fwout.write(String
-                        .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrClustering, addErrRSM2SD, 
-                                addErrRSP2SD, String.valueOf(item)));
+                    .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrClustering,
+                        addErrRSM2SD,
+                        addErrRSP2SD, String.valueOf(item)));
+            }
         }
         fwout.close();
-        
 
         if (writeCentroids && merging != null) {
             fout = new File(outName + "_merging_centroids");
-            System.out.printf("centroids file:" +  outName + "_merging_centroids\n");
+            System.out.printf("centroids file:" + outName + "_merging_centroids\n");
             fout.createNewFile();
             fwout = new FileWriter(fout);
             fwout.write(String.format("n=%d\n", size));
@@ -394,18 +413,19 @@ public class IIDgenerator {
             fwout.write(String.format("delta = %d (compression param of t-digest)\n", compr));
             fwout.write(String.format("# of centroids = %d\n", merging.centroids().size()));
             fwout.write(String.format("t-digest size in bytes = %d\n", merging.byteSize()));
-            fwout.write(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(), reqsk.getSerializationBytes()));
+            fwout.write(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(),
+                reqsk.getSerializationBytes()));
             Duration diff = Duration.between(startTime, Instant.now());
             String hms = String.format("%d:%02d:%02d", diff.toHours(),
-                    (int)(diff.toMinutes() % 60),
-                    (int)(diff.toSeconds() % 60));
+                (int) (diff.toMinutes() % 60),
+                (int) (diff.toSeconds() % 60));
             fwout.write(String.format("time taken = %s\n", hms));
-    
+
             fwout.write("\nProperties:\n");
             for (Object key : prop.keySet()) {
                 fwout.write(key + " = " + prop.getProperty(key.toString()) + "\n");
             }
-    
+
             fwout.write("\nCentroids:\n");
             for (Centroid centr : merging.centroids()) {
                 fwout.write(centr.toString() + "\n");
@@ -414,7 +434,7 @@ public class IIDgenerator {
         }
         if (writeCentroids && clustering != null) {
             fout = new File(outName + "_clustering_centroids");
-            System.out.printf("centroids file:" +  outName + "_clustering_centroids\n");
+            System.out.printf("centroids file:" + outName + "_clustering_centroids\n");
             fout.createNewFile();
             fwout = new FileWriter(fout);
             fwout.write(String.format("n=%d\n", size));
@@ -422,18 +442,19 @@ public class IIDgenerator {
             fwout.write(String.format("delta = %d (compression param of t-digest)\n", compr));
             fwout.write(String.format("# of centroids = %d\n", clustering.centroids().size()));
             fwout.write(String.format("t-digest size in bytes = %d\n", clustering.byteSize()));
-            fwout.write(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(), reqsk.getSerializationBytes()));
+            fwout.write(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(),
+                reqsk.getSerializationBytes()));
             Duration diff = Duration.between(startTime, Instant.now());
             String hms = String.format("%d:%02d:%02d", diff.toHours(),
-                    (int)(diff.toMinutes() % 60),
-                    (int)(diff.toSeconds() % 60));
+                (int) (diff.toMinutes() % 60),
+                (int) (diff.toSeconds() % 60));
             fwout.write(String.format("time taken = %s\n", hms));
-    
+
             fwout.write("\nProperties:\n");
             for (Object key : prop.keySet()) {
                 fwout.write(key + " = " + prop.getProperty(key.toString()) + "\n");
             }
-    
+
             fwout.write("\nCentroids:\n");
             for (Centroid centr : clustering.centroids()) {
                 fwout.write(centr.toString() + "\n");

@@ -13,41 +13,52 @@ This repository is a clone of the [Ted Dunning's repository for t-digest](https:
 
 ## Running experiments
 
-The first step is to compile the whole repository using [Apache Maven](https://maven.apache.org/) in the `core/` directory (possibly, one can skip running the unit tests using `-DskipTests=true`):
+The first step is to compile the whole repository using [Apache Maven](https://maven.apache.org/) in the `core/` directory via, for example (possibly, one can skip running the unit tests using `-DskipTests=true`):
 
-    $ mvn test
+    $ mvn clean install
 
 Before running any of the aforementioned three experiments, we need to modify the CLASSPATH variable for Java:
 
-    $ export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes:./target/classes/org/apache/datasketches/req/ReqSketch:../../datasketches/target/classes"
+    $ export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes:./target/classes/org/apache/datasketches/req/ReqSketch:../../datasketches/target/classes:../../../.m2/repository/org/apache/datasketches/datasketches-java/1.3.0-incubating/datasketches-java-1.3.0-incubating.jar"
 Next, we run an experiment implemented as class `[Class]` (see below) with parameters specified in a configuration file using:
 
     $ java -ea -Dfile.encoding=UTF-8 com.tdunning.math.stats.[Class] [configuration files]...
 
 We provide prepared configuration files in the `core/resources/` directory (options for each parameter are listed in the comment). The classes for the three tests are:
 
-1. `com.tdunning.math.stats.CarefulAttack` for the careful construction of a hard input for t-digest. There are three configuration files available (TODO: update once everything ready):
+1. `com.tdunning.math.stats.CarefulAttack` for the careful construction of a hard input for t-digest. There are three configuration files available:
     - `core/resources/CarefulAttack_k_0_merging.conf` -- for scale function k_0 and the merging variant of t-digest,
     - `core/resources/CarefulAttack_k_0_clustering.conf` -- for scale function k_0 and the clustering variant of t-digest, and
-    - `core/resources/CarefulAttack_k_3_clustering.conf` -- for scale function k_3 and the clustering variant of t-digest.
+    - `core/resources/CarefulAttack_k_3_clustering.conf` -- for scale function k_3 and the clustering variant of t-digest (this one was not used in the paper).
 2. `com.tdunning.math.stats.IIDgenerator` for the generator of i.i.d. samples from a specified distribution; the prepared configuration file is `core/resources/IIDgenerator.conf`.
 3. `com.tdunning.math.stats.SpeedComparison` for the comparison of the runtime of t-digest (using either the merging or clustering variant), ReqSketch and KLL sketch.
 
 Each of these tests outputs a CSV file with generated results to a specified directory (which is `data/results/` by default).
 
-To generate the plots in the paper, the following experiments should be run:
+To generate the plots and tables in the paper, the following experiments should be run:
 - scenario 1. above with both `CarefulAttack_k_0_merging.conf` and `CarefulAttack_k_0_clustering.conf`
 - scenario 2. with:
   - `IIDgenerator.conf` as given
   - `IIDgenerator.conf` modified to use `Distribution=loguniform`
   - `IIDgenerator.conf` modified to use `MaxExp=10` (keeping `Distribution=loguniform2`)
+- scenario 3. with `resources/SpeedComparison.conf` as given to reproduce Table 1 and then with `ReqKmax=50` to reproduce Figure 5
         
-Note this can be sped up considerably by reducing the number of trials (`LgT` in `IIDgenerator.conf`).
-        
-Then from `docs/python/adversarial_plots`, run `make notebook`. Then run the entire notebok. This will both render the plots in the notebook, and save image files to `docs/python/adversarial_plots/images/`.
+Note this can be sped up considerably by reducing the number of trials (parameter `LgT`).
 
-OR TODO run the following python script... 
+Then from `docs/python/adversarial_plots`, run `make install` and then `make notebook`. Then run the entire `error_plots` notebook. This will both render the plots in the notebook, and save image files to `docs/python/adversarial_plots/images/`.
 
+## Additional plots
+
+As the weak ordering of centroids plays a role in the $t$-digest error, we provide some plots to understand the nature of the weak ordering in the various scenarios.
+
+Run scenario 1. (the careful attacks) with `WriteCentroidData=true, CompareToSorted=true`. (This will overwrite outputs with identical files if you have already run the experiment with the given configuration.)
+Run scenario 2. (the IID case) with `writeCentroidData=true, DigestImpl=`.
+
+These generate outputs which are used by both the `overlap_computation` notebook and a cell in the `error_plots` notebook demonstrating the (theoretically clear) result that the carefully constructed input is not difficult for the t-digest when presented in sorted order.
+
+The "local overlap" plots do not appear in the paper.
+
+(TODO: script versions of notebooks)
 
 ## Remarks
 
