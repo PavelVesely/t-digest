@@ -20,9 +20,7 @@ package com.tdunning.math.stats;
 import org.apache.mahout.common.RandomUtils;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.Ignore;
 
-@Ignore
 public class AVLGroupTreeTest extends AbstractTest {
 
     @Before

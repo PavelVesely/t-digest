@@ -24,11 +24,9 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
-import org.junit.Ignore;
 
 import static junit.framework.Assert.assertEquals;
 
-@Ignore
 public class AlternativeMergeTest {
     /**
      * Computes size using the alternative scaling limit for both an idealized merge and for

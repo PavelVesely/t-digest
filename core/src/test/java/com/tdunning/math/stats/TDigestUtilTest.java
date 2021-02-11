@@ -24,8 +24,7 @@ import java.util.Random;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
-import org.junit.Ignore;
-@Ignore
+
 public class TDigestUtilTest extends AbstractTest {
 
     @Test

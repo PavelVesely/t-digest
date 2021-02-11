@@ -39,8 +39,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.time.*;
 
-import org.junit.Ignore;
-
 import com.tdunning.math.stats.datasketches.req.ReqSketch;
 import com.tdunning.math.stats.datasketches.kll.KllDoublesSketch;
 

@@ -31,14 +31,12 @@ import java.util.Random;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import org.junit.Ignore;
 
 /**
  * Verifies that the various TDigest implementations can be serialized.
  * <p>
  * Serializability is important, for example, if we want to use t-digests with Spark.
  */
-@Ignore
 public class TDigestSerializationTest {
     @Test
     public void testMergingDigest() throws IOException {

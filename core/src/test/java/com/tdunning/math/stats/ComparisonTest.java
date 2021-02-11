@@ -24,11 +24,9 @@ import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.List;
 import java.util.Random;
-import org.junit.Ignore;
 
 import static org.junit.Assert.*;
 
-@Ignore
 public class ComparisonTest {
     /**
      * This is a demo as well as a test. The scenario is that we have a thing that

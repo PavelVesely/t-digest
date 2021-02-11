@@ -26,8 +26,7 @@ import java.util.Random;
 import java.util.concurrent.*;
 
 import static org.junit.Assume.assumeTrue;
-import org.junit.Ignore;
-@Ignore
+
 public class MegaMergeTest {
 
     private static final int DAY = 280;
