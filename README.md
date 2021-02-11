@@ -45,9 +45,9 @@ To generate the plots and tables in the paper, the following experiments should 
         
 Note this can be sped up considerably by reducing the number of trials (parameter `LgT`).
 
-Then from `docs/python/adversarial_plots`, run `make install` and then `make notebook`. Then run the entire `error_plots` notebook. This will both render the plots in the notebook, and save image files to `docs/python/adversarial_plots/images/`.
+Then from `docs/python/adversarial_plots`, run `make install` and then `make notebook`. Then run the entire [error_plots](docs/python/adversarial_plots/notebooks/error_plots.ipynb) notebook. This will both render the plots in the notebook, and save image files to `docs/python/adversarial_plots/images/`.
 
-Run also the `speed_comparison` notebook, which plots the data resulting from scenario 3. above.
+Run also the [speed_comparison](docs/python/adversarial_plots/notebooks/speed_comparison.ipynb) notebook, which plots the data resulting from scenario 3. above.
 
 ## Additional plots
 
@@ -56,11 +56,9 @@ As the weak ordering of centroids plays a role in the t-digest error, we provide
 Run scenario 1. (the careful attacks) with `WriteCentroidData=true, CompareToSorted=true`. (This will overwrite outputs with identical files if you have already run the experiment with the given configuration.)
 Run scenario 2. (the IID case) with `writeCentroidData=true, DigestImpl=`.
 
-These generate outputs which are used by both the `overlap_computation` notebook and a cell in the `error_plots` notebook demonstrating the (theoretically clear) result that the carefully constructed input is not difficult for the t-digest when presented in sorted order.
+These generate outputs which are used by both the [overlap_computation](docs/python/adversarial_plots/notebooks/overlap_computation.ipynb) notebook and a cell in the [error_plots](docs/python/adversarial_plots/notebooks/error_plots.ipynb) notebook demonstrating the (theoretically clear) result that the carefully constructed input is not difficult for the t-digest when presented in sorted order.
 
 The "local overlap" plots do not appear in the paper.
-
-(TODO: script versions of notebooks)
 
 ## Remarks
 
