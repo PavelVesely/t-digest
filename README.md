@@ -13,10 +13,11 @@ This repository is a clone of the [Ted Dunning's repository for t-digest](https:
 
 ## Running experiments
 
-The first step is to compile the whole repository using [Apache Maven](https://maven.apache.org/) in the `core/` directory via, for example (possibly, one can skip running the unit tests using `-DskipTests=true`):
+The first step is to compile the whole repository using [Apache Maven](https://maven.apache.org/) in the `core/` directory via, for example:
 
     $ mvn clean install
 
+Possibly, one can skip running the unit tests using `-DskipTests=true`.
 Before running any of the aforementioned three experiments, we need to modify the CLASSPATH variable for Java:
 
     $ export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes:./target/classes/org/apache/datasketches/req/ReqSketch:../../datasketches/target/classes:../../../.m2/repository/org/apache/datasketches/datasketches-java/1.3.0-incubating/datasketches-java-1.3.0-incubating.jar"
@@ -24,7 +25,7 @@ Next, we run an experiment implemented as class `[Class]` (see below) with param
 
     $ java -ea -Dfile.encoding=UTF-8 com.tdunning.math.stats.[Class] [configuration files]...
 
-We provide prepared configuration files in the `core/resources/` directory (options for each parameter are listed in the comment). The classes for the three tests are:
+We provide prepared configuration files in the `core/resources/` directory (description of each parameter is inside the configuration file). The classes for the three tests are:
 
 1. `com.tdunning.math.stats.CarefulAttack` for the careful construction of a hard input for t-digest. There are three configuration files available:
     - `core/resources/CarefulAttack_k_0_merging.conf` -- for scale function k_0 and the merging variant of t-digest,
@@ -41,7 +42,7 @@ To generate the plots and tables in the paper, the following experiments should 
   - `IIDgenerator.conf` as given
   - `IIDgenerator.conf` modified to use `Distribution=loguniform`
   - `IIDgenerator.conf` modified to use `MaxExp=10` (keeping `Distribution=loguniform2`)
-- scenario 3. with `resources/SpeedComparison.conf` as given to reproduce Table 1 and then with `ReqKmax=50` to reproduce Figure 5
+- scenario 3. with `resources/SpeedComparison.conf` as given to reproduce Table 1 and Figure 5
         
 Note this can be sped up considerably by reducing the number of trials (parameter `LgT`).
 
