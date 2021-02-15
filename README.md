@@ -18,6 +18,12 @@ The first step is to compile the whole repository using [Apache Maven](https://m
     $ mvn clean install
 
 Possibly, one can skip running the unit tests using `-DskipTests=true`.
+
+To generate all required data to reproduce all plots and tables in the paper, run the following script in the `core/` directory (see below for generating the plots):
+
+    $ ./RunAllExperiments.sh
+
+Alternatively, one can run all experiments one by one, with a possibility to adjust parameters.
 Before running any of the aforementioned three experiments, we need to modify the CLASSPATH variable for Java:
 
     $ export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes:./target/classes/org/apache/datasketches/req/ReqSketch:../../datasketches/target/classes:../../../.m2/repository/org/apache/datasketches/datasketches-java/1.3.0-incubating/datasketches-java-1.3.0-incubating.jar"
@@ -46,7 +52,9 @@ To generate the plots and tables in the paper, the following experiments should 
         
 Note this can be sped up considerably by reducing the number of trials (parameter `LgT`).
 
-Then from `docs/python/adversarial_plots`, run `make install` and then `make notebook`. Then run the entire [error_plots](docs/python/adversarial_plots/notebooks/error_plots.ipynb) notebook. This will both render the plots in the notebook, and save image files to `docs/python/adversarial_plots/images/`.
+## Creating plots
+
+After generating results of the experiments as outlined above, from `docs/python/adversarial_plots`, run `make install` and then `make notebook`. Then run the entire [error_plots](docs/python/adversarial_plots/notebooks/error_plots.ipynb) notebook. This will both render the plots in the notebook, and save image files to `docs/python/adversarial_plots/images/`.
 
 Run also the [speed_comparison](docs/python/adversarial_plots/notebooks/speed_comparison.ipynb) notebook, which plots the data resulting from scenario 3. above.
 
