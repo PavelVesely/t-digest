@@ -142,10 +142,12 @@ public class IIDgenerator {
         KllDoublesSketch[] errorKllsClustering = new KllDoublesSketch[NumberOfPoints + 1];
         KllDoublesSketch[] errorKllsMerging = new KllDoublesSketch[NumberOfPoints + 1];
         KllDoublesSketch[] errorKllsRS = new KllDoublesSketch[NumberOfPoints + 1];
+        KllDoublesSketch[] errorKllsRSinterpol = new KllDoublesSketch[NumberOfPoints + 1];
         for (int t = 0; t <= NumberOfPoints; t++) {
             errorKllsClustering[t] = new KllDoublesSketch(200);  // we do not need extreme quantiles
             errorKllsMerging[t] = new KllDoublesSketch(200);
             errorKllsRS[t] = new KllDoublesSketch(200);
+            errorKllsRSinterpol[t] = new KllDoublesSketch(200);
         }
 
         maxExpBase10 = (int) (Math.log(Double.MAX_VALUE / N) / Math.log(10));
@@ -270,6 +272,17 @@ public class IIDgenerator {
                     addErrRS = (rEstRS - rTrueMax) / N;
                 }
                 errorKllsRS[t].update(addErrRS);
+
+                // ReqSketch error w/ linear interpolation
+                rEstRS = reqsk.getRankWithLinearInterpolation(item) * N;
+                addErrRS = 0;
+                if (rEstRS < rTrueMin) {
+                    addErrRS = (rEstRS - rTrueMin) / N;
+                }
+                if (rEstRS > rTrueMax) {
+                    addErrRS = (rEstRS - rTrueMax) / N;
+                }
+                errorKllsRSinterpol[t].update(addErrRS);
             }
         }
         //Collections.sort(data);
@@ -294,7 +307,7 @@ public class IIDgenerator {
         }
 
         writeResults(Compression, n, NumberOfPoints, prop, merging, clustering, reqsk,
-            errorKllsMerging, errorKllsClustering, errorKllsRS, sortedData,
+            errorKllsMerging, errorKllsClustering, errorKllsRS, errorKllsRSinterpol, sortedData,
             startTime, DigestStatsDir,
             DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl
                 + "_compr=" + String.valueOf(Compression) + "_" + scale.toString()
@@ -349,6 +362,7 @@ public class IIDgenerator {
         MergingDigest merging, AVLTreeDigest clustering, ReqSketch reqsk,
         KllDoublesSketch[] errorKllsMerging, KllDoublesSketch[] errorKllsClustering,
         KllDoublesSketch[] errorKllsRS,
+        KllDoublesSketch[] errorKllsRSinterpol,
         List<Double> sortedData, Instant startTime, String digestStatsDir, String outName,
         boolean writeCentroids) throws
         IOException {
@@ -363,8 +377,8 @@ public class IIDgenerator {
         //System.out.flush();
 
         fwout.write(
-            "true quantile;" + (merging != null ? "Merging;" : "") + (clustering != null
-                ? "Clustering;" : "") + "ReqSketch -2SD;ReqSketch +2SD;item\n");
+            "true quantile;" + (merging != null ? "Merging -2SD;Merging Med;Merging +2SD;" : "") + (clustering != null
+                ? "Clustering;" : "") + "ReqSketch -2SD;ReqSketch +2SD;ReqSketch LI interpolation -2SD;ReqSketch LI +2SD;item\n");
         //"true quantile;t-digest -2SD error;TD median error;TD +2SD error;Req -2SD error;Req median error;Req +2SD error;item\n");
         for (int t = 0; t <= numPoints; t++) {
             int rTrue = (int) Math.ceil(t / (float) numPoints * size) + 1;
@@ -372,33 +386,35 @@ public class IIDgenerator {
                 rTrue--;
             }
             double item = sortedData.get(rTrue - 1); // in the last trial
-            //double addErrTDM2SD = errorKllsTD[t].getQuantile(M2SD);
-            //double addErrTDP2SD = errorKllsTD[t].getQuantile(P2SD);
+            double addErrTDmergingM2SD = errorKllsMerging[t].getQuantile(M2SD);
+            double addErrTDmergingP2SD = errorKllsMerging[t].getQuantile(P2SD);
             double addErrMerging = merging != null ? errorKllsMerging[t].getQuantile(0.5) : 0;
             double addErrClustering =
                 clustering != null ? errorKllsClustering[t].getQuantile(0.5) : 0;
             double addErrRSM2SD = errorKllsRS[t].getQuantile(M2SD);
             double addErrRSP2SD = errorKllsRS[t].getQuantile(P2SD);
+            double addErrRSinterpolM2SD = errorKllsRSinterpol[t].getQuantile(M2SD);
+            double addErrRSinterpolP2SD = errorKllsRSinterpol[t].getQuantile(P2SD);
             //double addErrRSMed = errorKllsRS[t].getQuantile(0.5);
 
             //relErr = Math.abs(rTrueMax - rEst) / (size - rTrue + 1);
             if (merging != null && clustering != null) {
                 fwout.write(String
-                    .format("%.6f;%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrMerging,
+                    .format("%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrMerging,
                         addErrClustering, addErrRSM2SD,
-                        addErrRSP2SD, String.valueOf(item)));
+                        addErrRSP2SD, addErrRSinterpolM2SD, addErrRSinterpolP2SD, String.valueOf(item)));
             }
             if (merging != null && clustering == null) {
                 fwout.write(String
-                    .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrMerging,
+                    .format("%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrTDmergingM2SD, addErrMerging, addErrTDmergingP2SD,
                         addErrRSM2SD,
-                        addErrRSP2SD, String.valueOf(item)));
+                        addErrRSP2SD, addErrRSinterpolM2SD, addErrRSinterpolP2SD, String.valueOf(item)));
             }
             if (merging == null && clustering != null) {
                 fwout.write(String
-                    .format("%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrClustering,
+                    .format("%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%s\n", rTrue / (float) size, addErrClustering,
                         addErrRSM2SD,
-                        addErrRSP2SD, String.valueOf(item)));
+                        addErrRSP2SD, addErrRSinterpolM2SD, addErrRSinterpolP2SD, String.valueOf(item)));
             }
         }
         fwout.close();

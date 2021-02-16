@@ -372,6 +372,44 @@ public class ReqSketch extends BaseReqSketch {
     return (double)nnCount / totalN;
   }
 
+  public double getRankWithLinearInterpolation(final double value) {
+    if (isEmpty()) { return Double.NaN; }
+    assert ltEq == true; // TODO implement ltEq == false
+    if (value < minValue) { return 0; }
+    if (value >= maxValue) { return 1; }
+    
+    double maxSmallerEq = Double.NEGATIVE_INFINITY;
+    long maxSmallerEqWt = 0;
+    double minLargerEq = Double.POSITIVE_INFINITY;
+    long minLargerEqWt = 0;
+    
+    ReqIterator iter = new ReqIterator(this);
+    while (iter.next()) {
+      double val = iter.getValue();
+      if (val <= value && val > maxSmallerEq) {
+        maxSmallerEq = val;
+        maxSmallerEqWt = iter.getWeight();
+      }
+      else if (val == maxSmallerEq) {
+        maxSmallerEqWt += iter.getWeight();
+      }
+      if (val >= value && val < minLargerEq) {
+        minLargerEq = val;
+        minLargerEqWt = iter.getWeight();
+      }
+      else if (val == minLargerEq) {
+          minLargerEqWt += iter.getWeight();
+      }
+    }
+    final long maxSmallerEqCnt = getCount(maxSmallerEq);
+    if (maxSmallerEq == minLargerEq) { return (double)maxSmallerEqCnt / totalN; } // no interpolation needed
+    assert maxSmallerEq < minLargerEq;
+    final long minLargerEqCnt = getCount(minLargerEq);
+    assert minLargerEqCnt == maxSmallerEqCnt + minLargerEqWt;
+    final double interpolation = maxSmallerEqCnt + (value - maxSmallerEq) * minLargerEqWt / (minLargerEq - maxSmallerEq);
+    return interpolation / totalN;
+  }
+  
   @Override
   public double[] getRanks(final double[] values) {
     if (isEmpty()) { return null; }
