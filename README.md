@@ -17,8 +17,6 @@ The first step is to compile the whole repository using [Apache Maven](https://m
 
     $ mvn clean install
 
-Possibly, one can skip running the unit tests using `-DskipTests=true`.
-
 To generate all required data to reproduce all plots and tables in the paper, run the following script in the `core/` directory (see below for generating the plots):
 
     $ ./RunAllExperiments.sh
