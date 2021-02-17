@@ -2,7 +2,7 @@
 
 # runs all experiments mentioned in README (scenarios 1., 2. and 3.) to reproduce the results in the paper 
 
-export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes:.target/classes/org/apache/datasketches/req/ReqSketch:../../datasketches/target/classes:../../../.m2/repository/org/apache/datasketches/datasketches-java/1.3.0-incubating/datasketches-java-1.3.0-incubating.jar"
+export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes"
 
 # scenario 1.
 java -ea -Dfile.encoding=UTF-8 com.tdunning.math.stats.CarefulAttack resources/CarefulAttack_k_0_merging.conf &
