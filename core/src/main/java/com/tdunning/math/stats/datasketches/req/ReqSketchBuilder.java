@@ -48,7 +48,7 @@ public class ReqSketchBuilder {
    * Returns a new ReqSketch with the current configuration of the builder.
    * @return a new ReqSketch
    */
-  public ReqSketch build() throws Exception {
+  public ReqSketch build() {
     final ReqSketch sk = new ReqSketch(bK, bHRA, bReqDebug);
     sk.setLessThanOrEqual(bLtEq);
     return sk;

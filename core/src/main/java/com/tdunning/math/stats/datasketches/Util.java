@@ -25,7 +25,7 @@ import static java.lang.Math.log;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
 import static org.apache.datasketches.hash.MurmurHash3.hash;
-//import com.tdunning.math.stats.datasketches.SketchesArgumentException;
+import com.tdunning.math.stats.datasketches.SketchesArgumentException;
 
 import java.io.File;
 import java.io.IOException;
@@ -627,13 +627,13 @@ public final class Util {
    * They must be unique, monotonically increasing and not NaN.
    * @param values the given array of values
    */
-  public static void validateValues(final double[] values) throws Exception {
+  public static void validateValues(final double[] values) {
     for (int i = 0; i < values.length; i++) {
       if (!Double.isFinite(values[i])) {
-        throw new Exception("Values must be finite");
+        throw new SketchesArgumentException("Values must be finite");
       }
       if (i < values.length - 1 && values[i] >= values[i + 1]) {
-        throw new Exception(
+        throw new SketchesArgumentException(
           "Values must be unique and monotonically increasing");
       }
     }

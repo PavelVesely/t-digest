@@ -32,7 +32,7 @@ import java.util.Arrays;
 
 import org.apache.datasketches.ByteArrayUtil;
 import org.apache.datasketches.Family;
-import org.apache.datasketches.SketchesArgumentException;
+import com.tdunning.math.stats.datasketches.SketchesArgumentException;
 import com.tdunning.math.stats.datasketches.Util;
 import org.apache.datasketches.memory.Memory;
 

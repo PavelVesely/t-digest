@@ -129,7 +129,7 @@ class ReqSerDe {
   private static final byte SER_VER = 1;
   private static final byte FAMILY_ID = 17;
 
-  static ReqSketch heapify(final Memory mem) throws Exception {
+  static ReqSketch heapify(final Memory mem) {
     final Buffer buff = mem.asBuffer();
     //Extract first 8 bytes
     final byte preInts = buff.getByte();

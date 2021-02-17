@@ -22,7 +22,7 @@ package com.tdunning.math.stats.datasketches.req;
 import java.util.Arrays;
 
 import com.tdunning.math.stats.datasketches.InequalitySearch;
-//import org.apache.datasketches.SketchesArgumentException;
+import com.tdunning.math.stats.datasketches.SketchesArgumentException;
 import org.apache.datasketches.memory.WritableBuffer;
 import org.apache.datasketches.memory.WritableMemory;
 
@@ -230,13 +230,13 @@ class DoubleBuffer {
    * @param odds if true, return the odds, otherwise return the evens.
    * @return the selected odds from the range
    */
-  DoubleBuffer getEvensOrOdds(final int startOffset, final int endOffset, final boolean odds) throws Exception {
+  DoubleBuffer getEvensOrOdds(final int startOffset, final int endOffset, final boolean odds) {
     final int start = spaceAtBottom_ ? capacity_ - count_ + startOffset : startOffset;
     final int end = spaceAtBottom_ ? capacity_ - count_ + endOffset : endOffset;
     sort();
     final int range = endOffset - startOffset;
     if ((range & 1) == 1) {
-      throw new RuntimeException("Input range size must be even");
+      throw new SketchesArgumentException("Input range size must be even");
     }
     final int odd = odds ? 1 : 0;
     final double[] out = new double[range / 2];
@@ -338,9 +338,9 @@ class DoubleBuffer {
    * @param bufIn sorted buffer in
    * @return this
    */
-  DoubleBuffer mergeSortIn(final DoubleBuffer bufIn) throws Exception {
+  DoubleBuffer mergeSortIn(final DoubleBuffer bufIn) {
     if (!sorted_ || !bufIn.isSorted()) {
-      throw new RuntimeException("Both buffers must be sorted.");
+      throw new SketchesArgumentException("Both buffers must be sorted.");
     }
     final double[] arrIn = bufIn.getArray(); //may be larger than its item count.
     final int bufInLen = bufIn.getCount();

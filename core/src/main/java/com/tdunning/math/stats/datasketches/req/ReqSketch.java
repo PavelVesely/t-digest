@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-//import org.apache.datasketches.SketchesArgumentException;
+import com.tdunning.math.stats.datasketches.SketchesArgumentException;
 import org.apache.datasketches.memory.Memory;
 
 
@@ -135,7 +135,7 @@ public class ReqSketch extends BaseReqSketch {
    * accuracy. Otherwise the low ranks are prioritized for better accuracy.
    * @param reqDebug the debug handler. It may be null.
    */
-  public ReqSketch(final int k, final boolean highRankAccuracy, final ReqDebug reqDebug) throws Exception {
+  public ReqSketch(final int k, final boolean highRankAccuracy, final ReqDebug reqDebug) {
     checkK(k);
     this.k = k;
     hra = highRankAccuracy;
@@ -174,7 +174,7 @@ public class ReqSketch extends BaseReqSketch {
    * Used by ReqSerDe.
    */
   ReqSketch(final int k, final boolean hra, final long totalN, final double minValue,
-      final double maxValue, final List<ReqCompactor> compactors) throws Exception {
+      final double maxValue, final List<ReqCompactor> compactors) {
     checkK(k);
     this.k = k;
     this.hra = hra;
@@ -189,7 +189,7 @@ public class ReqSketch extends BaseReqSketch {
    * @param mem The Memory object holding a valid image of an ReqSketch
    * @return an ReqSketch on the heap from a Memory image of the sketch.
    */
-  public static ReqSketch heapify(final Memory mem) throws Exception {
+  public static ReqSketch heapify(final Memory mem) {
     return ReqSerDe.heapify(mem);
   }
 
@@ -201,7 +201,7 @@ public class ReqSketch extends BaseReqSketch {
     return new ReqSketchBuilder();
   }
 
-  public void compress() throws Exception {
+  public void compress() {
     if (reqDebug != null) { reqDebug.emitStartCompress(); }
     for (int h = 0; h < compactors.size(); h++) {
       final ReqCompactor c = compactors.get(h);
@@ -229,7 +229,7 @@ public class ReqSketch extends BaseReqSketch {
   }
 
   @Override
-  public double[] getCDF(final double[] splitPoints) throws Exception {
+  public double[] getCDF(final double[] splitPoints) {
     if (isEmpty()) { return null; }
     final int numBkts = splitPoints.length + 1;
     final double[] outArr = new double[numBkts];
@@ -314,7 +314,7 @@ public class ReqSketch extends BaseReqSketch {
   }
 
   @Override
-  public double[] getPMF(final double[] splitPoints) throws Exception {
+  public double[] getPMF(final double[] splitPoints) {
     if (isEmpty()) { return null; }
     final int numBkts = splitPoints.length + 1;
     final double[] outArr = new double[numBkts];
@@ -331,7 +331,7 @@ public class ReqSketch extends BaseReqSketch {
    * @param splits the splitPoints array
    * @return a CDF in raw counts
    */
-  private long[] getPMForCDF(final double[] splits) throws Exception {
+  private long[] getPMForCDF(final double[] splits) {
     validateSplits(splits);
     final int numSplits = splits.length;
     final long[] splitCounts = getCounts(splits);
@@ -342,7 +342,7 @@ public class ReqSketch extends BaseReqSketch {
   }
 
   @Override
-  public double getQuantile(final double normRank) throws Exception {
+  public double getQuantile(final double normRank) {
     if (isEmpty()) { return Double.NaN; }
     if (normRank < 0 || normRank > 1.0) {
       throw new RuntimeException(
@@ -355,7 +355,7 @@ public class ReqSketch extends BaseReqSketch {
   }
 
   @Override
-  public double[] getQuantiles(final double[] normRanks) throws Exception {
+  public double[] getQuantiles(final double[] normRanks) {
     if (isEmpty()) { return null; }
     final int len = normRanks.length;
     final double[] qArr = new double[len];
@@ -465,7 +465,7 @@ public class ReqSketch extends BaseReqSketch {
   }
 
   @Override
-  public ReqSketch merge(final ReqSketch other) throws Exception {
+  public ReqSketch merge(final ReqSketch other) {
     if (other == null || other.isEmpty()) { return this; }
     if (other.hra != hra) {
       throw new RuntimeException(
@@ -533,7 +533,7 @@ public class ReqSketch extends BaseReqSketch {
   }
 
   @Override
-  public void update(final double item) throws Exception {
+  public void update(final double item) {
     if (Double.isNaN(item)) { return; }
     if (isEmpty()) {
       minValue = item;
@@ -590,15 +590,15 @@ public class ReqSketch extends BaseReqSketch {
    * and is monotonically increasing in value.
    * @param splits the given array
    */
-  static void validateSplits(final double[] splits) throws Exception {
+  static void validateSplits(final double[] splits) {
     final int len = splits.length;
     for (int i = 0; i < len; i++) {
       final double v = splits[i];
       if (!Double.isFinite(v)) {
-        throw new RuntimeException("Values must be finite");
+        throw new SketchesArgumentException("Values must be finite");
       }
       if (i < len - 1 && v >= splits[i + 1]) {
-        throw new RuntimeException(
+        throw new SketchesArgumentException(
           "Values must be unique and monotonically increasing");
       }
     }
@@ -620,9 +620,9 @@ public class ReqSketch extends BaseReqSketch {
     return sb.toString();
   }
 
-  static void checkK(final int k) throws Exception {
+  static void checkK(final int k) {
     if ((k & 1) > 0 || k < MIN_K || k > 1024) {
-      throw new RuntimeException(
+      throw new SketchesArgumentException(
           "<i>K</i> must be even and in the range [4, 1024], inclusive: " + k );
     }
   }

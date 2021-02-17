@@ -117,7 +117,7 @@ class ReqCompactor {
    * Perform a compaction operation on this compactor
    * @return the array of items to be promoted to the next level compactor
    */
-  DoubleBuffer compact(final CompactorReturn cReturn) throws Exception {
+  DoubleBuffer compact(final CompactorReturn cReturn) {
     if (reqDebug != null) { reqDebug.emitCompactingStart(lgWeight); }
     final int startRetItems = buf.getCount();
     final int startNomCap = getNomCapacity();
@@ -208,7 +208,7 @@ class ReqCompactor {
    * @param other the other given compactor
    * @return this
    */
-  ReqCompactor merge(final ReqCompactor other) throws Exception {
+  ReqCompactor merge(final ReqCompactor other) {
     assert lgWeight == other.lgWeight;
     state |= other.state;
     while (ensureEnoughSections()) {}
