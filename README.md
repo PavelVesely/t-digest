@@ -71,4 +71,4 @@ The "local overlap" plots do not appear in the paper.
 
 - Merged all commits till Jan 28, 2021 from the main branch of [Ted Dunning's repository for t-digest](https://github.com/tdunning/t-digest).
 - Code taken from the DataSketches library is as of Jan 29, 2021.
-- ReqSketch and KLL are implemented by the DataSketches library using the `float` data type, however, t-digest uses `double`. As we needed to work with the `double` type in our experiments, we switched the implementations of these two algorithms to `double` (essentially just using find/replace). Also, we recommend using JDK 8 since the DataSketches repo requires it (and t-digest is compatible it).
+- ReqSketch and KLL are implemented by the DataSketches library using the `float` data type, however, t-digest uses `double`. As we needed to work with the `double` type in our experiments, we switched the implementations of these two algorithms to `double` (essentially just using find/replace). Also, we recommend using JDK 8 since the DataSketches repo requires it (and t-digest is compatible with it).
