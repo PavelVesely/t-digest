@@ -91,7 +91,8 @@ public class CarefulAttack {
                 Double.parseDouble(SpeedComparison.getProperty(prop, "initBatchSizeMult"))),
             seed, Boolean.parseBoolean(SpeedComparison.getProperty(prop, "CompareToSorted")),
             Boolean.parseBoolean(SpeedComparison.getProperty(prop, "maintainRightCentroid")),
-            SpeedComparison.getProperty(prop, "compareTo"));
+            SpeedComparison.getProperty(prop, "compareTo"),
+            Boolean.parseBoolean(SpeedComparison.getProperty(prop, "Verbose")));
     }
 
     private class NestedInputParams {
@@ -124,7 +125,7 @@ public class CarefulAttack {
     public List<Double> carefulNestedAroundZero(ScaleFunction scaleFunction, double delta,
         String implementation, boolean useAlternatingSort, int iterations, boolean writeResults,
         boolean writeCentroidData, NestedInputParams params, long seed, boolean compareToSorted,
-        boolean maintainRightCentroid, String compareTo) throws Exception {
+        boolean maintainRightCentroid, String compareTo, boolean verbose) throws Exception {
 
         List<Double> errors = new ArrayList<>();
 
@@ -133,8 +134,8 @@ public class CarefulAttack {
         TDigest digest = CarefulAttackAuxiliary
             .digest(delta, implementation, scaleFunction, useAlternatingSort,
                 writeCentroidData, seed);
-        System.out.println(
-            "delta:\t" + delta);
+        if (verbose)
+            System.out.println("delta:\t" + delta);
 
         int initializingHalfBatchSize = (int) Math.floor(delta * params.initBatchSizeMult);
 
@@ -142,8 +143,9 @@ public class CarefulAttack {
         double infty = (Double.MAX_VALUE) / denom; // so we can safely average
 
         double increment = infty / initializingHalfBatchSize;
-        System.out.println(
-            "infty:\t" + infty + "\ninitializingHalfBatchSize: \t" + initializingHalfBatchSize);
+        if (verbose) 
+            System.out.println(
+                    "infty:\t" + infty + "\ninitializingHalfBatchSize: \t" + initializingHalfBatchSize);
 
         // try to place the attack in the right tail
         if (!(scaleFunction == ScaleFunction.K_0)) {
@@ -266,16 +268,19 @@ public class CarefulAttack {
             }
 
             // weight of the centroid we will fabricate
-            System.out.println("centroids count: " + digest.centroids().size());
+            if (verbose) 
+                System.out.println("centroids count: " + digest.centroids().size());
             weightGoal = weightGoal(scaleFunction, delta, weightToLeft, weightToRight,
                 digest.size(), params.deltaMult);
             //(int) Math.ceil((weightToLeft + weightToRight) / ((delta / 2d) - 3d));
-            System.out.println("weightGoal: " + weightGoal);
+            if (verbose) 
+                System.out.println("weightGoal: " + weightGoal);
 
             // this information is relevant mainly for K_0, where the behavior is uniform
-            System.out.println(
-                "centroids exceeding goal at start: " + centroidsExceedingCount(digest.centroids(),
-                    weightGoal));
+            if (verbose) 
+                System.out.println(
+                        "centroids exceeding goal at start: " + centroidsExceedingCount(digest.centroids(),
+                                weightGoal));
             currentDeficit = weightGoal - weightOfAttacked;
             // if (its > 2) {assert currentDeficit >= 0;}
 
@@ -339,17 +344,19 @@ public class CarefulAttack {
                     sortedData.add(rightCentroidVal);
                 }
             }
-            System.out.println(String
-                .format(
-                    "centerOfAttack:\t%s\npoint:\t\t%s\nanotherPoint:\t%s\nnewCentroidMainValue:  \t%s\nnextStreamValue:\t%s",
-                    centerOfAttack, centerOfAttack, anotherPoint, newCentroidMainValue,
-                    nextStreamValue));
+            if (verbose) 
+                System.out.println(String
+                        .format(
+                                "centerOfAttack:\t%s\npoint:\t\t%s\nanotherPoint:\t%s\nnewCentroidMainValue:  \t%s\nnextStreamValue:\t%s",
+                                centerOfAttack, centerOfAttack, anotherPoint, newCentroidMainValue,
+                                nextStreamValue));
 
             digest.compress();
 
-            System.out.println(
-                "centroids exceeding goal at end: " + centroidsExceedingCount(digest.centroids(),
-                    weightGoal - 1));
+            if (verbose) 
+                System.out.println(
+                        "centroids exceeding goal at end: " + centroidsExceedingCount(digest.centroids(),
+                                weightGoal - 1));
 
             double bad_point = 0;
             //double bad_point = newCentroidMainValue;
@@ -360,17 +367,19 @@ public class CarefulAttack {
 
             // detectDupes(data, "iteration " + its);
             // detectDupes(digest.centroids());
-
-            System.out.println("finished iteration: " + iteration);
-            System.out.println("belowZeroC mean: " + belowZeroC.mean());
-            System.out.println("aboveZeroC mean: " + aboveZeroC.mean());
+            if (verbose) {
+                System.out.println("finished iteration: " + iteration);
+                System.out.println("belowZeroC mean: " + belowZeroC.mean());
+                System.out.println("aboveZeroC mean: " + aboveZeroC.mean());
+            }
             //System.out.println("bad point: " + bad_point);
 
             if (iteration > 1) {
-                System.out.println("td " + digest.cdf(bad_point));
+                if (verbose) 
+                    System.out.println("td " + digest.cdf(bad_point));
                 double truth = countBelow(bad_point, sortedData) / (double) data.size();
-                System.out
-                    .println("truth " + truth);
+                if (verbose) 
+                    System.out.println("truth " + truth);
                 double error = Math.abs(digest.cdf(bad_point) - truth);
 
                 errors.add(error);
@@ -380,8 +389,10 @@ public class CarefulAttack {
                     indexError = iteration;
                 }
             }
-            System.out.println("maximal error so far: " + maximalError + " on " + indexError);
-            System.out.println("num centroids: " + digest.centroids().size() + "\n");
+            if (verbose) {
+                System.out.println("maximal error so far: " + maximalError + " on " + indexError);
+                System.out.println("num centroids: " + digest.centroids().size() + "\n");
+            }
 
             //double yetAnotherPoint = centerOfAttack * 0.9 + nextStreamValue * ;
             centroidToAttack = belowZeroC; //aboveValue(anotherPoint, digest.centroids()); //centerOfAttack //belowZeroC; //

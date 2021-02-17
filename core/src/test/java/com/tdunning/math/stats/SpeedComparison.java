@@ -133,7 +133,7 @@ public class SpeedComparison {
             fout = new File(outName);
             fout.createNewFile();
             fwout = new FileWriter(fout);
-            fwout.write("\nReqSketch:\n");
+            //fwout.write("\nReqSketch:\n");
             fwout.write("k;Partial laziness;Full laziness:\n");
             for (int k = reqK; k <= reqKmax; k += 2) {
                 long N = 1l << LgNmax;
