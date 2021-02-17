@@ -5,6 +5,7 @@ REQUIREMENTS?=requirements.txt
 .PHONY: install reinstall
 
 install:
+	$(PYTHON) -m pip install virtualenv
 	$(PYTHON) -m virtualenv $(VENV)
 	. $(VENV)/bin/activate; $(PYTHON) -m pip install -r $(REQUIREMENTS)
 
@@ -13,4 +14,4 @@ reinstall:
 	$(MAKE) install
 
 notebook:
-	. $(VENV)/bin/activate; jupyter notebook --notebook-dir=notebooks
+	. $(VENV)/bin/activate; /home/vesely/.local/bin/jupyter notebook --notebook-dir=notebooks
