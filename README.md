@@ -52,7 +52,7 @@ Note this can be sped up considerably by reducing the number of trials (paramete
 
 ## Creating plots
 
-After generating results of the experiments as outlined above, from `docs/python/adversarial_plots`, run `make install` and then `make notebook`. Then run the entire [error_plots](docs/python/adversarial_plots/notebooks/error_plots.ipynb) notebook. This will both render the plots in the notebook, and save image files to `docs/python/adversarial_plots/images/`.
+After generating results of the experiments as outlined above, from `docs/python/adversarial_plots`, run `make install` and then `make notebook`. Then run the entire [error_plots](docs/python/adversarial_plots/notebooks/error_plots.ipynb) notebook. This will both render the plots in the notebook, and save image files to `docs/python/adversarial_plots/images/`. Note that `RunAllExperiments.sh` will take some time to complete, so the data required by the notebooks will not be immediately available.
 
 Run also the [speed_comparison](docs/python/adversarial_plots/notebooks/speed_comparison.ipynb) notebook, which plots the data resulting from scenario 3. above.
 
