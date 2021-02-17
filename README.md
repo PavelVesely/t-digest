@@ -24,7 +24,7 @@ To generate all required data to reproduce all plots and tables in the paper, ru
 Alternatively, one can run all experiments one by one, with a possibility to adjust parameters.
 Before running any of the aforementioned three experiments, we need to modify the CLASSPATH variable for Java:
 
-    $ export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes:./target/classes/org/apache/datasketches/req/ReqSketch:../../datasketches/target/classes:../../../.m2/repository/org/apache/datasketches/datasketches-java/1.3.0-incubating/datasketches-java-1.3.0-incubating.jar"
+    $ export CLASSPATH="$CLASSPATH:./target/classes:./target/test-classes"
 Next, we run an experiment implemented as class `[Class]` (see below) with parameters specified in a configuration file using:
 
     $ java -ea -Dfile.encoding=UTF-8 com.tdunning.math.stats.[Class] [configuration files]...
