@@ -21,7 +21,7 @@ package com.tdunning.math.stats.datasketches.kll;
 
 import java.util.Arrays;
 
-import org.apache.datasketches.QuantilesHelper;
+import com.tdunning.math.stats.datasketches.QuantilesHelper;
 
 /**
  * Data structure for answering quantile queries based on the samples from KllSketch
