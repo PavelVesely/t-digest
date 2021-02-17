@@ -14,4 +14,4 @@ reinstall:
 	$(MAKE) install
 
 notebook:
-	. $(VENV)/bin/activate; /home/vesely/.local/bin/jupyter notebook --notebook-dir=notebooks
+	. $(VENV)/bin/activate; jupyter notebook --notebook-dir=notebooks
