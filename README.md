@@ -21,6 +21,11 @@ To generate all required data to reproduce all plots and tables in the paper, ru
 
     $ ./RunAllExperiments.sh
 
+Note that some experiments take up to several hours to finish, and only after that one can [generate the plots](#creating-plots).
+Experiment can be configured to require less time by reducing the number of trials or the input size, as described below.
+
+### Adjusting experiments
+
 Alternatively, one can run all experiments one by one, with a possibility to adjust parameters.
 Before running any of the aforementioned three experiments, we need to modify the CLASSPATH variable for Java:
 
@@ -48,7 +53,8 @@ To generate the plots and tables in the paper, the following experiments should 
   - `IIDgenerator.conf` modified to use `MaxExp=10` (keeping `Distribution=loguniform2`)
 - scenario 3. with `resources/SpeedComparison.conf` as given to reproduce Table 1 and Figure 5
         
-Note this can be sped up considerably by reducing the number of trials (parameter `LgT`).
+Note this can be sped up considerably by reducing the number of trials (parameter `LgT`) in the first two scenarios and reducing the input size (parameter `LgNmax`) in scenario 3,
+which may, however, cause the experimental results to be less accurate.
 
 ## Creating plots
 
