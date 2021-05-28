@@ -57,11 +57,11 @@ public class LoguniformWithVaryingMaxExpGenerator {
     final int T; // the number of trials
     final int LgN; // log_2 of the number of i.i.d. items in the generated input
     final int LgT; // log_2 of the number of trials
-    final int NumClusters; // for clustered distribution
+    //final int NumClusters; // for clustered distribution
     final int NumberOfPoints; // number of points where we probe the rank estimates
     final Boolean NegativeNumbers; // if false, generate positive numbers only
     //final Boolean WriteCentroidData;
-    final double lambda; // parameter for exponential distribution
+    //final double lambda; // parameter for exponential distribution
     final String DigestImpl; // "Merging" or "AVLTree"
     final int Compression; // delta for t-digest
     final ScaleFunction scale; // ScaleFunction for t-digest
@@ -82,11 +82,12 @@ public class LoguniformWithVaryingMaxExpGenerator {
 
     double[] maxRelErrorClustering;
     double[] maxRelErrorMerging;
-    double[] maxRelErrorRS;
+    double[] maxRelErrorRS_2SD;
+    double[] maxRelErrorRS_median;
     double[] avgRelErrorClustering;
     double[] avgRelErrorMerging;
-    double[] avgRelErrorRS;
-
+    double[] avgRelErrorRS_2SD;
+    double[] avgRelErrorRS_median;
 
     public LoguniformWithVaryingMaxExpGenerator(final String configFile) throws Exception {
         Instant startTime = Instant.now();
@@ -103,13 +104,11 @@ public class LoguniformWithVaryingMaxExpGenerator {
         N = 1 << LgN;
         LgT = Integer.parseInt(getProperty("LgT")); // base 2
         T = 1 << LgT;
-        NumClusters = Integer.parseInt(getProperty("NumClusters"));
         NumberOfPoints = Integer.parseInt(
             getProperty("NumberOfPoints")); // number of points where we probe the rank estimates
         NegativeNumbers = Boolean.parseBoolean(
             getProperty("NegativeNumbers")); // if false, generate positive numbers only
         //WriteCentroidData = Boolean.parseBoolean(getProperty("WriteCentroidData")); // disable in this experiment for simplicity (run IIDgenerator instead)
-        lambda = Double.parseDouble(getProperty("Lambda")); // for exponential distribution
         Compression = Integer.parseInt(getProperty("Compression")); // delta for t-digest
         scale = ScaleFunction.valueOf(getProperty("ScaleFunction")); // ScaleFunction for t-digest
 //        InputStreamFileName = getProperty("InputStreamFileName");
@@ -140,10 +139,12 @@ public class LoguniformWithVaryingMaxExpGenerator {
         int numMaxExps = maxExpForDoubleBase10 / maxExpStep;
         maxRelErrorClustering = new double[numMaxExps];
         maxRelErrorMerging = new double[numMaxExps];
-        maxRelErrorRS = new double[numMaxExps];
+        maxRelErrorRS_2SD = new double[numMaxExps];
+        maxRelErrorRS_median = new double[numMaxExps];
         avgRelErrorClustering = new double[numMaxExps];
         avgRelErrorMerging = new double[numMaxExps];
-        avgRelErrorRS = new double[numMaxExps];
+        avgRelErrorRS_2SD = new double[numMaxExps];
+        avgRelErrorRS_median = new double[numMaxExps];
 
 
 //        for (n = 0; n < N; n++) {
@@ -277,40 +278,46 @@ public class LoguniformWithVaryingMaxExpGenerator {
                 }
             }
             // aggregate err
-            maxRelErrorRS[maxExpIter] = 0;
+            maxRelErrorRS_2SD[maxExpIter] = 0;
+            maxRelErrorRS_median[maxExpIter] = 0;
             maxRelErrorMerging[maxExpIter] = 0;
             maxRelErrorClustering[maxExpIter] = 0;
-            avgRelErrorRS[maxExpIter] = 0;
+            avgRelErrorRS_2SD[maxExpIter] = 0;
+            avgRelErrorRS_median[maxExpIter] = 0;
             avgRelErrorMerging[maxExpIter] = 0;
             avgRelErrorClustering[maxExpIter] = 0;
+            int numAvg = 0;
             for (int t = 0; t < NumberOfPoints; t++) { // no need to do it for t == NumberOfPoints
-                double relErr =  Math.abs(errorKllsRS[t].getQuantile(IIDgenerator.P2SD)) * NumberOfPoints / (NumberOfPoints - t);
-                if (relErr > maxRelErrorRS[maxExpIter]) maxRelErrorRS[maxExpIter] = relErr;
-                avgRelErrorRS[maxExpIter] += relErr;
+                double relErr =  Math.abs(errorKllsRS[t].getQuantile(0.5)) * NumberOfPoints / (NumberOfPoints - t);
+                if (relErr > maxRelErrorRS_median[maxExpIter]) maxRelErrorRS_median[maxExpIter] = relErr;
+                //if (t > NumberOfPoints * 0.6)
+                avgRelErrorRS_median[maxExpIter] += relErr;
+                relErr =  Math.abs(errorKllsRS[t].getQuantile(IIDgenerator.P2SD)) * NumberOfPoints / (NumberOfPoints - t);
+                if (relErr > maxRelErrorRS_2SD[maxExpIter]) maxRelErrorRS_2SD[maxExpIter] = relErr;
+                //if (t > NumberOfPoints * 0.6)
+                avgRelErrorRS_2SD[maxExpIter] += relErr;
                 if (merging != null) {
-                    relErr =  Math.abs(errorKllsMerging[t].getQuantile(IIDgenerator.P2SD)) * NumberOfPoints / (NumberOfPoints - t);
+                    relErr =  Math.abs(errorKllsMerging[t].getQuantile(0.5)) * NumberOfPoints / (NumberOfPoints - t);
                     if (relErr > maxRelErrorMerging[maxExpIter]) maxRelErrorMerging[maxExpIter] = relErr;
                     avgRelErrorMerging[maxExpIter] += relErr;
                 }
                 if (clustering != null) {
-                    relErr =  Math.abs(errorKllsClustering[t].getQuantile(IIDgenerator.P2SD)) * NumberOfPoints / (NumberOfPoints - t);
+                    relErr =  Math.abs(errorKllsClustering[t].getQuantile(0.5)) * NumberOfPoints / (NumberOfPoints - t);
                     if (relErr > maxRelErrorClustering[maxExpIter]) maxRelErrorClustering[maxExpIter] = relErr;
                     avgRelErrorClustering[maxExpIter] += relErr;
                 }
             }
-            avgRelErrorRS[maxExpIter] /= NumberOfPoints;
+            avgRelErrorRS_2SD[maxExpIter] /= NumberOfPoints;
+            avgRelErrorRS_median[maxExpIter] /= NumberOfPoints;
             avgRelErrorClustering[maxExpIter] /= NumberOfPoints;
             avgRelErrorMerging[maxExpIter] /= NumberOfPoints;
             System.out
-                .println("finished experiment with maxExp =" + String.valueOf(maxExp));
+                .println("finished experiment with maxExp = " + String.valueOf(maxExp));
+            System.out.flush();
             
             maxExpIter++;
         }
         //Collections.sort(data);
-
-        System.out
-            .println("processing by t-digest done for compression =" + String.valueOf(Compression));
-        System.out.flush();
 
         writeAggregatedResults(startTime, merging, clustering, reqsk, DigestStatsDir,
             DigestStatsDir + DigestStatsFileName + fileNamePart + "_" + DigestImpl
@@ -362,34 +369,27 @@ public class LoguniformWithVaryingMaxExpGenerator {
 
         fwout.write(
             "MaxExp;" + (merging != null ? "Merging MaxRE;" : "") + (clustering != null
-                ? "Clustering MaxRE;" : "") + "ReqSketch MaxRE;" + (merging != null ? "Merging AvgRE;" : "") + (clustering != null
-                ? "Clustering AvgRE;" : "") + "ReqSketch AvgRE\n");
-        //"true quantile;t-digest -2SD error;TD median error;TD +2SD error;Req -2SD error;Req median error;Req +2SD error;item\n");
+                ? "Clustering MaxRE;" : "") + "ReqSketch MaxRE of median;ReqSketch MaxRE of +2SD;" + (merging != null ? "Merging AvgRE;" : "") + (clustering != null
+                ? "Clustering AvgRE;" : "") + "ReqSketch AvgRE of median;ReqSketch AvgRE of +2SD\n");
         int maxExpIter = 0;
         for (maxExp = maxExpStep; maxExp <= maxExpForDoubleBase10; maxExp+=maxExpStep) {
-            /*maxRelErrorClustering = new maxRelErrorClustering[numMaxExps];
-            double[] maxRelErrorMerging = new maxRelErrorMerging[numMaxExps];
-            double[] maxRelErrorRS = new maxRelErrorRS[numMaxExps];
-            double[] avgRelErrorClustering = new avgRelErrorClustering[numMaxExps];
-            double[] avgRelErrorMerging = new avgRelErrorMerging[numMaxExps];
-            double[] avgRelErrorRS*/
             if (merging != null && clustering != null) {
                 fwout.write(String
-                    .format("%d;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f\n", maxExp,
-                            maxRelErrorMerging[maxExpIter], maxRelErrorClustering[maxExpIter], maxRelErrorRS[maxExpIter],
-                            avgRelErrorMerging[maxExpIter], avgRelErrorClustering[maxExpIter], avgRelErrorRS[maxExpIter]));
+                    .format("%d;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f\n", maxExp,
+                            maxRelErrorMerging[maxExpIter], maxRelErrorClustering[maxExpIter], maxRelErrorRS_median[maxExpIter], maxRelErrorRS_2SD[maxExpIter],
+                            avgRelErrorMerging[maxExpIter], avgRelErrorClustering[maxExpIter], avgRelErrorRS_median[maxExpIter], avgRelErrorRS_2SD[maxExpIter]));
             }
             if (merging != null && clustering == null) {
                 fwout.write(String
-                        .format("%d;%.6f;%.6f;%.6f;%.6f\n", maxExp,
-                                maxRelErrorMerging[maxExpIter], maxRelErrorRS[maxExpIter],
-                                avgRelErrorMerging[maxExpIter], avgRelErrorRS[maxExpIter]));
+                        .format("%d;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f\n", maxExp,
+                                maxRelErrorMerging[maxExpIter], maxRelErrorRS_median[maxExpIter], maxRelErrorRS_2SD[maxExpIter],
+                                avgRelErrorMerging[maxExpIter], avgRelErrorRS_median[maxExpIter], avgRelErrorRS_2SD[maxExpIter]));
             }
             if (merging == null && clustering != null) {
                 fwout.write(String
-                        .format("%d;%.6f;%.6f;%.6f;%.6f\n", maxExp,
-                                maxRelErrorClustering[maxExpIter], maxRelErrorRS[maxExpIter],
-                                avgRelErrorClustering[maxExpIter], avgRelErrorRS[maxExpIter]));
+                        .format("%d;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f\n", maxExp,
+                                maxRelErrorClustering[maxExpIter], maxRelErrorRS_median[maxExpIter], maxRelErrorRS_2SD[maxExpIter],
+                                avgRelErrorClustering[maxExpIter], avgRelErrorRS_median[maxExpIter], avgRelErrorRS_2SD[maxExpIter]));
             }
 
             maxExpIter++;
@@ -408,11 +408,11 @@ public class LoguniformWithVaryingMaxExpGenerator {
             fwout.write(String.format("t-digest size in bytes = %d\n", merging.byteSize()));
             fwout.write(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(),
                 reqsk.getSerializationBytes()));
-            Duration diff = Duration.between(startTime, Instant.now());
-//            String hms = String.format("%d:%02d:%02d", diff.toHours(), % doesn't work in JDK 1.8
-//                (int) (diff.toMinutes() % 60),
-//                (int) (diff.toSeconds() % 60));
-//            fwout.write(String.format("time taken = %s\n", hms));
+            //Duration diff = Duration.between(startTime, Instant.now());
+            /*String hms = String.format("%d:%02d:%02d", diff.toHours(), // doesn't work in JDK 1.8
+                (int) (diff.toMinutes() % 60),
+                (int) (diff.toSeconds() % 60));
+            fwout.write(String.format("time taken = %s\n", hms));*/
 
             fwout.write("\nProperties:\n");
             for (Object key : prop.keySet()) {
@@ -437,7 +437,7 @@ public class LoguniformWithVaryingMaxExpGenerator {
             fwout.write(String.format("t-digest size in bytes = %d\n", clustering.byteSize()));
             fwout.write(String.format("ReqSketch w/ k=%d size in bytes = %d\n", reqsk.getK(),
                 reqsk.getSerializationBytes()));
-            Duration diff = Duration.between(startTime, Instant.now());
+//            Duration diff = Duration.between(startTime, Instant.now());
 //            String hms = String.format("%d:%02d:%02d", diff.toHours(), % doesn't work in JDK 1.8
 //                (int) (diff.toMinutes() % 60),
 //                (int) (diff.toSeconds() % 60));
