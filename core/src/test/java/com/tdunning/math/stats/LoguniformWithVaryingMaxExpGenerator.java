@@ -369,8 +369,8 @@ public class LoguniformWithVaryingMaxExpGenerator {
 
         fwout.write(
             "MaxExp;" + (merging != null ? "Merging MaxRE;" : "") + (clustering != null
-                ? "Clustering MaxRE;" : "") + "ReqSketch MaxRE of median;ReqSketch MaxRE of +2SD;" + (merging != null ? "Merging AvgRE;" : "") + (clustering != null
-                ? "Clustering AvgRE;" : "") + "ReqSketch AvgRE of median;ReqSketch AvgRE of +2SD\n");
+                ? "Clustering MaxRE;" : "") + "ReqSketch MaxRE (median);ReqSketch MaxRE (+2SD);" + (merging != null ? "Merging AvgRE;" : "") + (clustering != null
+                ? "Clustering AvgRE;" : "") + "ReqSketch AvgRE (median);ReqSketch AvgRE (+2SD)\n");
         int maxExpIter = 0;
         for (maxExp = maxExpStep; maxExp <= maxExpForDoubleBase10; maxExp+=maxExpStep) {
             if (merging != null && clustering != null) {
