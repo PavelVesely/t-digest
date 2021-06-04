@@ -8,7 +8,7 @@ The t-digest is already known to perform very well on data drawn from uniform or
 3. A study of the relative error of the two approaches for the log-uniform and log-uniform^2 distributions, as a key parameter (`maxExp`) varies.
 4. A comparison of the runtime of t-digest (for both the merging and clustering variants), ReqSketch and KLL sketch.
 
-These experiments can be used to reproduce results in the paper 'Theory meets Practice: worst case behavior of quantile algorithms' to appear in KDD 2021 (Applied Data Science Track); [arXiv preprint](https://arxiv.org/abs/2102.09299).
+These experiments can be used to reproduce results in the paper 'Theory meets Practice at the Median: a worst case comparison of relative error quantile algorithms' to appear in KDD 2021 (Applied Data Science Track); [arXiv preprint](https://arxiv.org/abs/2102.09299).
 
 This repository is a clone of the [Ted Dunning's repository for t-digest](https://github.com/tdunning/t-digest), also incorporating [asymmetric scale functions](https://arxiv.org/abs/2005.09599) from [signal-fx/t-digest repository](https://github.com/signalfx/t-digest/tree/asymmetric). We included the implementations of ReqSketch and the KLL sketch from the [Apache DataSketches library](https://datasketches.apache.org/). Finally, we developed new generators of instances for testing accuracy of these two algorithms and one test for comparing the speed, which are described below.
 
